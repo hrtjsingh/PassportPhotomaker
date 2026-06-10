@@ -1,5 +1,5 @@
 import { ModelRegistry } from '@huggingface/transformers';
-import { getBgRemovalConfig } from './bgRemovalConfig';
+import { getBgRemovalConfig, ensureBgRemovalPublicPath } from './bgRemovalConfig';
 import { HQ_BG_MODEL, PRELOAD_CACHE_VERSION } from '../config/mlModels';
 
 const STORAGE_KEY = 'passportmaker:models-cache';
@@ -64,6 +64,7 @@ export async function areModelsCached(): Promise<boolean> {
   const record = readCacheRecord();
   if (!record) return false;
 
+  await ensureBgRemovalPublicPath();
   const { publicPath, model } = getBgRemovalConfig();
 
   const [modnetCached, imglyCached] = await Promise.all([

@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
+    "prebuild": "node scripts/prebuild.mjs",
     "build": "vite build",
     "preview": "vite preview",
+    "start": "node server.mjs",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "setup:bg-removal": "node scripts/setup-bg-removal.mjs"

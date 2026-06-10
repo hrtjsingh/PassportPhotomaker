@@ -1,5 +1,5 @@
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
-import { getBgRemovalConfig } from './bgRemovalConfig';
+import { getBgRemovalConfig, ensureBgRemovalPublicPath } from './bgRemovalConfig';
 import { waitForModelPreload } from './modelPreload';
 import {
   addImagePadding,
@@ -19,6 +19,7 @@ export async function removeBackground(
 ): Promise<string> {
   try {
     await waitForModelPreload();
+    await ensureBgRemovalPublicPath();
     const { paddedSrc, padding } = await addImagePadding(imageSrc, 0.1);
     const paddedBlob = await dataUrlToBlob(paddedSrc);
 
@@ -55,7 +56,7 @@ export async function removeBackground(
       error instanceof TypeError &&
       (String(error.message).includes('fetch') ||
         String(error.message).includes('URL'))
-        ? 'Could not load the background removal model. Restart the dev server, or run: npm run setup:bg-removal'
+        ? 'Could not load the background removal model. Use npm start (not static hosting alone), or run: npm run setup:bg-removal && npm run build'
         : error instanceof Error
           ? error.message
           : 'Background removal failed';

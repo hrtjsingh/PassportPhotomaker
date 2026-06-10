@@ -1,4 +1,4 @@
-import { getBgRemovalConfig } from './bgRemovalConfig';
+import { getBgRemovalConfig, ensureBgRemovalPublicPath } from './bgRemovalConfig';
 import { HQ_BG_MODEL } from '../config/mlModels';
 import { areModelsCached, markModelsCached } from './modelCacheCheck';
 import type { WorkerPreloadCommand, WorkerPreloadEvent } from '../workers/modelPreload.worker';
@@ -105,14 +105,17 @@ function runWorkerPreload(resolve: () => void): void {
     resolve();
   };
 
-  const { publicPath, model } = getBgRemovalConfig();
-  const command: WorkerPreloadCommand = {
-    type: 'start',
-    publicPath,
-    imglyModel: model,
-    modnetModel: HQ_BG_MODEL,
-  };
-  worker.postMessage(command);
+  void (async () => {
+    const resolved = await ensureBgRemovalPublicPath();
+    const { model } = getBgRemovalConfig();
+    const command: WorkerPreloadCommand = {
+      type: 'start',
+      publicPath: resolved,
+      imglyModel: model,
+      modnetModel: HQ_BG_MODEL,
+    };
+    worker?.postMessage(command);
+  })();
 }
 
 export function getModelPreloadState(): ModelPreloadState {
