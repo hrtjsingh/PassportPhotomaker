@@ -1,5 +1,6 @@
 import React from 'react';
 import { Download, FileText, Printer } from 'lucide-react';
+import { Button } from './ui/Button';
 
 interface DownloadButtonsProps {
   onDownloadPng: () => void;
@@ -12,36 +13,42 @@ export const DownloadButtons: React.FC<DownloadButtonsProps> = ({
   onDownloadPng,
   onDownloadPdf,
   onPrint,
-  disabled
+  disabled,
 }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 w-full max-w-2xl mx-auto mt-6 md:mt-8">
-      <button
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl mx-auto mt-6 md:mt-8">
+      <Button
+        variant="secondary"
+        size="lg"
+        fullWidth
+        disabled={disabled}
         onClick={onDownloadPng}
-        disabled={disabled}
-        className="flex items-center justify-center gap-2 py-3 md:py-4 px-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl font-medium text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all disabled:opacity-50 shadow-sm"
+        icon={<Download className="w-4 h-4" />}
       >
-        <Download className="w-5 h-5" />
-        PNG
-      </button>
-      
-      <button
-        onClick={onDownloadPdf}
-        disabled={disabled}
-        className="flex items-center justify-center gap-2 py-3 md:py-4 px-6 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all disabled:opacity-50 shadow-lg shadow-zinc-200 dark:shadow-none"
-      >
-        <FileText className="w-5 h-5" />
-        PDF
-      </button>
+        Download PNG
+      </Button>
 
-      <button
-        onClick={onPrint}
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
         disabled={disabled}
-        className="flex items-center justify-center gap-2 py-3 md:py-4 px-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl font-medium text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all disabled:opacity-50 shadow-sm"
+        onClick={onDownloadPdf}
+        icon={<FileText className="w-4 h-4" />}
       >
-        <Printer className="w-5 h-5" />
-        Print
-      </button>
+        Download PDF
+      </Button>
+
+      <Button
+        variant="secondary"
+        size="lg"
+        fullWidth
+        disabled={disabled}
+        onClick={onPrint}
+        icon={<Printer className="w-4 h-4" />}
+      >
+        Print A4
+      </Button>
     </div>
   );
 };

@@ -7,8 +7,6 @@ import {
   Settings, 
   Layout, 
   Download, 
-  ChevronRight, 
-  ChevronLeft,
   RotateCcw,
   Wand2,
   Moon,
@@ -31,11 +29,14 @@ import { generatePassportPhoto } from './utils/generatePassportPhoto';
 import { generateA4Layout } from './utils/generateA4Layout';
 import { exportPDF } from './utils/exportPDF';
 import { PassportSize, PASSPORT_SIZES } from './config/passportSizes';
-import { cn } from './utils/cn';
 
 import { ImageEnhancer } from './components/ImageEnhancer';
+import { ModelPreloadIndicator } from './components/ModelPreloadIndicator';
+import { StepProgress, type WizardStep } from './components/StepProgress';
+import { StepFooter } from './components/StepFooter';
+import { Button } from './components/ui/Button';
 
-type Step = 'upload' | 'crop' | 'background' | 'enhance' | 'settings' | 'preview';
+type Step = WizardStep;
 
 const STEPS: { id: Step; label: string; icon: any }[] = [
   { id: 'upload', label: 'Upload', icon: Camera },
@@ -82,8 +83,40 @@ export default function App() {
   const [numCopies, setNumCopies] = useState(8);
   const [upscaleFactor, setUpscaleFactor] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
+  const [enhanceSkipped, setEnhanceSkipped] = useState(false);
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const completedSteps = new Set<Step>();
+  if (originalImage) completedSteps.add('upload');
+  if (croppedImage) completedSteps.add('crop');
+  if (transparentImage) completedSteps.add('background');
+  if (enhancedImage || enhanceSkipped) completedSteps.add('enhance');
+  if (passportPhoto) completedSteps.add('settings');
+  if (a4Layout) completedSteps.add('preview');
+
+  const canNavigateToStep = (target: Step): boolean => {
+    if (target === 'upload') return true;
+    const targetIdx = STEPS.findIndex((s) => s.id === target);
+    const required: Record<Step, boolean> = {
+      upload: true,
+      crop: Boolean(originalImage),
+      background: Boolean(croppedImage),
+      enhance: Boolean(transparentImage),
+      settings: Boolean(transparentImage),
+      preview: Boolean(passportPhoto),
+    };
+    for (let i = 0; i <= targetIdx; i++) {
+      const id = STEPS[i].id;
+      if (!required[id]) return false;
+    }
+    return true;
+  };
+
+  const goToStep = (step: Step) => {
+    if (canNavigateToStep(step)) setCurrentStep(step);
+  };
 
   // Handle image upload
   const handleUpload = (original: string, compressed: string) => {
@@ -99,40 +132,70 @@ export default function App() {
   }, []);
 
   const handleCropNext = async () => {
-    const source = originalImage || compressedImage;
-    if (!source || !cropArea) return;
+    const cropSource = compressedImage;
+    const exportSource = originalImage || compressedImage;
+    if (!cropSource || !exportSource || !cropArea) return;
+    setIsCropping(true);
     try {
-      // Calculate pixels based on original image dimensions to preserve quality
-      const img = new Image();
-      img.src = source;
-      await new Promise((resolve) => (img.onload = resolve));
-      
-      const pixels = {
-        x: (cropArea.x * img.width) / 100,
-        y: (cropArea.y * img.height) / 100,
-        width: (cropArea.width * img.width) / 100,
-        height: (cropArea.height * img.height) / 100,
-      };
-      
-      const cropped = await getCroppedImg(source, pixels);
+      // Crop percentages come from the compressed preview — scale to full resolution.
+      const [previewImg, exportImg] = await Promise.all([
+        new Promise<HTMLImageElement>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.src = cropSource;
+        }),
+        new Promise<HTMLImageElement>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.src = exportSource;
+        }),
+      ]);
+
+      const scaleX = exportImg.width / previewImg.width;
+      const scaleY = exportImg.height / previewImg.height;
+      const pixels = pixelCrop
+        ? {
+            x: pixelCrop.x * scaleX,
+            y: pixelCrop.y * scaleY,
+            width: pixelCrop.width * scaleX,
+            height: pixelCrop.height * scaleY,
+          }
+        : {
+            x: (cropArea.x * exportImg.width) / 100,
+            y: (cropArea.y * exportImg.height) / 100,
+            width: (cropArea.width * exportImg.width) / 100,
+            height: (cropArea.height * exportImg.height) / 100,
+          };
+
+      const cropped = await getCroppedImg(exportSource, pixels);
       setCroppedImage(cropped);
-      setTransparentImage(null); // Reset subsequent steps
+      setTransparentImage(null);
       setEnhancedImage(null);
+      setEnhanceSkipped(false);
       setCurrentStep('background');
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsCropping(false);
     }
   };
 
   // Handle background removal
   const handleBackgroundComplete = (transparent: string) => {
     setTransparentImage(transparent);
-    setEnhancedImage(null); // Reset enhancement when background changes
+    setEnhancedImage(null);
+    setEnhanceSkipped(false);
   };
 
-  // Handle enhancement
   const handleEnhanceComplete = (enhanced: string) => {
     setEnhancedImage(enhanced);
+    setEnhanceSkipped(false);
+  };
+
+  const handleSkipEnhance = () => {
+    setEnhanceSkipped(true);
+    setEnhancedImage(null);
+    setCurrentStep('settings');
   };
 
   // Generate passport photo when background or size changes
@@ -188,6 +251,7 @@ export default function App() {
     setPassportPhoto(null);
     setA4Layout(null);
     setUpscaleFactor(1);
+    setEnhanceSkipped(false);
     setCurrentStep('upload');
     setShowResetConfirm(false);
   };
@@ -226,26 +290,16 @@ export default function App() {
             <h1 className="text-lg md:text-xl font-bold tracking-tight font-display">PassportMaker</h1>
           </div>
           
-          <div className="hidden lg:flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-            {STEPS.map((step, idx) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.id;
-              
-              return (
-                <div key={step.id} className="flex items-center">
-                  <div className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                    isActive ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-sm" : "text-zinc-400 dark:text-zinc-500"
-                  )}>
-                    <Icon className="w-4 h-4" />
-                    <span>{step.label}</span>
-                  </div>
-                  {idx < STEPS.length - 1 && (
-                    <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 mx-1" />
-                  )}
-                </div>
-              );
-            })}
+          <div className="hidden lg:block">
+            {currentStep !== 'upload' && (
+              <StepProgress
+                steps={STEPS}
+                currentStep={currentStep}
+                completedSteps={completedSteps}
+                canNavigateTo={canNavigateToStep}
+                onStepClick={goToStep}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -269,6 +323,18 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
+        {currentStep !== 'upload' && (
+          <div className="lg:hidden mb-2">
+            <StepProgress
+              steps={STEPS}
+              currentStep={currentStep}
+              completedSteps={completedSteps}
+              canNavigateTo={canNavigateToStep}
+              onStepClick={goToStep}
+            />
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -282,13 +348,13 @@ export default function App() {
               <div className="w-full max-w-2xl text-center flex flex-col gap-8">
                 <div className="space-y-2">
                   <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 font-display">Create Print-Ready Passport Photos</h2>
-                  <p className="text-base md:text-lg text-zinc-500 dark:text-zinc-400">Professional quality, upto 1200 DPI, AI background removal. All in your browser.</p>
+                  <p className="text-base md:text-lg text-zinc-500 dark:text-zinc-400">Professional quality, upto 1200 DPI, open-source background removal. All in your browser.</p>
                 </div>
                 <UploadPhoto onUpload={handleUpload} />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-8">
                   {[
                     { label: '300 DPI Quality', desc: 'Print-ready resolution' },
-                    { label: 'AI Removal', desc: 'Automatic background cleanup' },
+                    { label: 'Open-Source AI', desc: 'Local background removal models' },
                     { label: 'A4 Layout', desc: 'Multiple copies on one sheet' }
                   ].map((item, i) => (
                     <div key={i} className="text-left p-4 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
@@ -328,21 +394,14 @@ export default function App() {
                       }}
                     />
                     
-                    <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                      <button 
-                        onClick={handleCropNext}
-                        className="w-full py-3 md:py-4 px-6 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all shadow-lg shadow-zinc-200 dark:shadow-none flex items-center justify-center gap-2"
-                      >
-                        Next Step
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => setCurrentStep('upload')}
-                        className="w-full py-2 px-6 bg-transparent text-zinc-500 dark:text-zinc-400 rounded-xl text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
-                      >
-                        Back to Upload
-                      </button>
-                    </div>
+                    <StepFooter
+                      onBack={() => setCurrentStep('upload')}
+                      backLabel="Back to Upload"
+                      onContinue={handleCropNext}
+                      continueLabel="Remove Background"
+                      continueLoading={isCropping}
+                      className="pt-4 border-t border-zinc-100 dark:border-zinc-800"
+                    />
                   </div>
                 </div>
               </div>
@@ -352,7 +411,7 @@ export default function App() {
               <div className="w-full flex flex-col items-center gap-6 md:gap-8">
                 <div className="text-center space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold">Background Removal</h2>
-                  <p className="text-sm md:text-base text-zinc-500 dark:text-zinc-400">Remove the original background and choose a professional color.</p>
+                  <p className="text-sm md:text-base text-zinc-500 dark:text-zinc-400">Remove the background, then pick your passport backdrop color.</p>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 w-full max-w-4xl items-start">
@@ -390,58 +449,45 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-3">
-                      <button 
-                        onClick={() => setCurrentStep('enhance')}
-                        className="w-full py-3 md:py-4 px-6 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all shadow-lg shadow-zinc-200 dark:shadow-none flex items-center justify-center gap-2"
-                      >
-                        Continue to Enhancement
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => setCurrentStep('crop')}
-                        className="w-full py-2 px-6 bg-transparent text-zinc-500 dark:text-zinc-400 rounded-xl text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
-                      >
-                        Back to Crop
-                      </button>
-                    </div>
+                    <StepFooter
+                      onBack={() => setCurrentStep('crop')}
+                      onContinue={() => setCurrentStep('enhance')}
+                      continueLabel="Continue to Enhance"
+                      continueDisabled={!transparentImage}
+                      continueHint="Remove the background first using one of the buttons on the left"
+                      className="pt-2"
+                    />
                   </div>
                 </div>
               </div>
             )}
 
-            {currentStep === 'enhance' && (transparentImage || croppedImage) && (
+            {currentStep === 'enhance' && transparentImage && (
               <div className="w-full flex flex-col items-center gap-6 md:gap-8">
                 <div className="text-center space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold">Enhance Photo Quality</h2>
-                  <p className="text-sm md:text-base text-zinc-500 dark:text-zinc-400">Fine-tune brightness, contrast, and sharpness for the perfect print.</p>
+                  <p className="text-sm md:text-base text-zinc-500 dark:text-zinc-400">Optional — sharpen features and clear skin, or skip to print settings.</p>
                 </div>
 
                 <ImageEnhancer 
-                  image={transparentImage || croppedImage || ''} 
+                  image={transparentImage} 
                   selectedColor={bgColor}
                   onComplete={handleEnhanceComplete} 
                 />
 
-                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full max-w-2xl mt-4">
-                  <button 
-                    onClick={() => setCurrentStep('background')}
-                    className="flex-1 py-3 md:py-4 px-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
-                  >
-                    Back
-                  </button>
-                  <button 
-                    onClick={() => setCurrentStep('settings')}
-                    className="flex-2 py-3 md:py-4 px-6 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all shadow-lg shadow-zinc-200 dark:shadow-none flex items-center justify-center gap-2"
-                  >
-                    Continue to Settings
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
+                <StepFooter
+                  onBack={() => setCurrentStep('background')}
+                  onContinue={() => setCurrentStep('settings')}
+                  continueLabel="Continue to Print Settings"
+                  secondaryAction={{
+                    label: 'Skip enhancement',
+                    onClick: handleSkipEnhance,
+                  }}
+                />
               </div>
             )}
 
-            {currentStep === 'settings' && passportPhoto && (
+            {currentStep === 'settings' && transparentImage && (
               <div className="w-full flex flex-col items-center gap-6 md:gap-8">
                 <div className="text-center space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold">Print Settings</h2>
@@ -455,21 +501,11 @@ export default function App() {
                       <UpscaleSelector value={upscaleFactor} onChange={setUpscaleFactor} />
                     </div>
                     
-                    <div className="flex gap-4">
-                      <button 
-                        onClick={() => setCurrentStep('enhance')}
-                        className="flex-1 py-3 md:py-4 px-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
-                      >
-                        Back
-                      </button>
-                      <button 
-                        onClick={() => setCurrentStep('preview')}
-                        className="flex-2 py-3 md:py-4 px-6 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all shadow-lg shadow-zinc-200 dark:shadow-none flex items-center justify-center gap-2"
-                      >
-                        Generate Preview
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
+                    <StepFooter
+                      onBack={() => setCurrentStep('enhance')}
+                      onContinue={() => setCurrentStep('preview')}
+                      continueLabel="Generate A4 Preview"
+                    />
                   </div>
 
                   <div className="flex flex-col items-center gap-4 order-1 lg:order-2">
@@ -483,7 +519,7 @@ export default function App() {
                           height: `${(200 / (selectedSize.id === 'custom' ? customWidth : selectedSize.widthMm)) * (selectedSize.id === 'custom' ? customHeight : selectedSize.heightMm)}px` 
                         }}
                       >
-                        <img src={passportPhoto} alt="Passport Preview" className="w-full h-full object-cover" />
+                        <img src={passportPhoto ?? transparentImage} alt="Passport Preview" className="w-full h-full object-cover" />
                       </div>
                     </div>
                     <div className="mt-4 text-center">
@@ -522,13 +558,11 @@ export default function App() {
                   disabled={isGenerating || !a4Layout}
                 />
 
-                <button 
-                  onClick={() => setCurrentStep('settings')}
-                  className="mt-4 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors flex items-center gap-1"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Back to Settings
-                </button>
+                <StepFooter
+                  onBack={() => setCurrentStep('settings')}
+                  backLabel="Back to Print Settings"
+                  className="mt-2"
+                />
               </div>
             )}
           </motion.div>
@@ -549,19 +583,13 @@ export default function App() {
               <p className="text-zinc-500 dark:text-zinc-400 mb-6">
                 Are you sure you want to start over? All your current progress will be lost.
               </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  className="flex-1 py-3 px-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 rounded-xl font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                >
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="secondary" size="md" fullWidth onClick={() => setShowResetConfirm(false)}>
                   Cancel
-                </button>
-                <button
-                  onClick={performReset}
-                  className="flex-1 py-3 px-4 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors shadow-lg shadow-red-200 dark:shadow-none"
-                >
+                </Button>
+                <Button variant="danger" size="md" fullWidth onClick={performReset}>
                   Reset
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -585,6 +613,8 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      <ModelPreloadIndicator />
     </div>
   );
 }

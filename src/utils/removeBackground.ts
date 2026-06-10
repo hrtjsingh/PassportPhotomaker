@@ -1,26 +1,64 @@
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
+import { getBgRemovalConfig } from './bgRemovalConfig';
+import { waitForModelPreload } from './modelPreload';
+import {
+  addImagePadding,
+  cropPaddingFromResult,
+  refineAlphaFromOriginal,
+} from './refineAlphaMask';
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const response = await fetch(dataUrl);
+  return response.blob();
+}
 
 export async function removeBackground(
   imageSrc: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  _backgroundColor = '#ffffff'
 ): Promise<string> {
   try {
-    const blob = await imglyRemoveBackground(imageSrc, {
+    await waitForModelPreload();
+    const { paddedSrc, padding } = await addImagePadding(imageSrc, 0.1);
+    const paddedBlob = await dataUrlToBlob(paddedSrc);
+
+    const blob = await imglyRemoveBackground(paddedBlob, {
+      ...getBgRemovalConfig(),
       progress: (key, current, total) => {
         if (onProgress) {
-          const progress = Math.round((current / total) * 100);
-          onProgress(progress);
+          onProgress(Math.round((current / total) * 100));
         }
       },
-      model: 'isnet_fp16', // More accurate than 'isnet'
-      output: {
-        quality: 1.0,         // Max quality output
-        format: 'image/png',  // PNG preserves transparency better
-      },
     });
-    return URL.createObjectURL(blob);
+
+    const paddedResultUrl = URL.createObjectURL(blob);
+    try {
+      const croppedBlob = await cropPaddingFromResult(paddedResultUrl, padding);
+      const croppedUrl = URL.createObjectURL(croppedBlob);
+
+      try {
+        const refinedBlob = await refineAlphaFromOriginal(imageSrc, croppedUrl, {
+          dilationRadius: 1,
+        });
+        URL.revokeObjectURL(croppedUrl);
+        return URL.createObjectURL(refinedBlob);
+      } catch {
+        // Fall back to cropped result if refinement fails
+        return croppedUrl;
+      }
+    } finally {
+      URL.revokeObjectURL(paddedResultUrl);
+    }
   } catch (error) {
     console.error('Background removal failed:', error);
-    throw error;
+    const message =
+      error instanceof TypeError &&
+      (String(error.message).includes('fetch') ||
+        String(error.message).includes('URL'))
+        ? 'Could not load the background removal model. Restart the dev server, or run: npm run setup:bg-removal'
+        : error instanceof Error
+          ? error.message
+          : 'Background removal failed';
+    throw new Error(message);
   }
 }
