@@ -18,6 +18,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
   const [lighting, setLighting] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [loadingMode, setLoadingMode] = useState<'sliders' | 'smart' | 'hq' | null>(null);
   const [modelProgress, setModelProgress] = useState(0);
   const [previewImage, setPreviewImage] = useState(image);
   const [hasEdited, setHasEdited] = useState(false);
@@ -44,6 +45,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
       skin = skinClear
     ) => {
       setIsProcessing(true);
+      setLoadingMode('sliders');
       try {
         const finalBrightness = b * (0.9 + l * 0.1);
         const finalContrast = c * (0.9 + l * 0.1);
@@ -60,6 +62,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
         console.error('Enhancement failed:', error);
       } finally {
         setIsProcessing(false);
+        setLoadingMode(null);
       }
     },
     [brightness, contrast, sharpen, lighting, skinClear, image, onComplete]
@@ -92,6 +95,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
     setSkinClear(0.45);
     setLighting(1.1);
     setIsProcessing(true);
+    setLoadingMode('smart');
     try {
       const result = await finishPortraitEnhance(image);
       setPreviewImage(result);
@@ -101,11 +105,13 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
       console.error('Enhancement failed:', error);
     } finally {
       setIsProcessing(false);
+      setLoadingMode(null);
     }
   };
 
   const handleAiEnhance = async () => {
     setIsAiProcessing(true);
+    setLoadingMode('hq');
     setModelProgress(0);
     try {
       const result = await aiEnhanceImage(image, selectedColor, (p) => setModelProgress(p));
@@ -119,6 +125,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
       alert(message);
     } finally {
       setIsAiProcessing(false);
+      setLoadingMode(null);
     }
   };
 
@@ -192,7 +199,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                 size="md"
                 fullWidth
                 disabled={busy}
-                loading={isProcessing && !isAiProcessing}
+                loading={loadingMode === 'smart'}
                 onClick={smartEnhance}
                 icon={<Zap className="w-3.5 h-3.5 fill-current" />}
               >
@@ -203,7 +210,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                 size="md"
                 fullWidth
                 disabled={busy}
-                loading={isAiProcessing}
+                loading={loadingMode === 'hq'}
                 onClick={handleAiEnhance}
                 icon={<Sparkles className="w-3.5 h-3.5" />}
               >
