@@ -22,7 +22,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
   const [modelProgress, setModelProgress] = useState(0);
   const [previewImage, setPreviewImage] = useState(image);
   const [hasEdited, setHasEdited] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     setPreviewImage(image);

@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
-import imageCompression from 'browser-image-compression';
+import imageCompression, { type Options as CompressionOptions } from 'browser-image-compression';
+
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 interface UploadPhotoProps {
   onUpload: (original: string, compressed: string) => void;
@@ -16,8 +18,8 @@ export const UploadPhoto: React.FC<UploadPhotoProps> = ({ onUpload }) => {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size exceeds 10MB limit.');
+    if (file.size > MAX_UPLOAD_BYTES) {
+      alert('File size exceeds 25MB limit.');
       return;
     }
 
@@ -25,10 +27,9 @@ export const UploadPhoto: React.FC<UploadPhotoProps> = ({ onUpload }) => {
     setProgress(0);
     const originalUrl = URL.createObjectURL(file);
 
-    // Increase limits to preserve high quality for 1200 DPI printing
-    const options = {
-      maxSizeMB: 4, // Increased from 1MB
-      maxWidthOrHeight: 3000, // Increased from 1200px
+    const options: CompressionOptions = {
+      maxSizeMB: 10,
+      maxWidthOrHeight: 3000,
       useWebWorker: true,
       onProgress: (p: number) => setProgress(p),
     };
@@ -92,7 +93,7 @@ export const UploadPhoto: React.FC<UploadPhotoProps> = ({ onUpload }) => {
           </div>
           <div className="text-center">
             <p className="text-base md:text-lg font-medium text-zinc-900 dark:text-zinc-50">Click or drag photo here</p>
-            <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1">Supports JPG, PNG (Max 10MB)</p>
+            <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1">Supports JPG, PNG (Max 25MB)</p>
           </div>
         </>
       )}

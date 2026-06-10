@@ -32,13 +32,13 @@ import { PassportSize, PASSPORT_SIZES } from './config/passportSizes';
 
 import { ImageEnhancer } from './components/ImageEnhancer';
 import { ModelPreloadIndicator } from './components/ModelPreloadIndicator';
-import { StepProgress, type WizardStep } from './components/StepProgress';
+import { StepProgress, type StepConfig, type WizardStep } from './components/StepProgress';
 import { StepFooter } from './components/StepFooter';
 import { Button } from './components/ui/Button';
 
 type Step = WizardStep;
 
-const STEPS: { id: Step; label: string; icon: any }[] = [
+const STEPS: StepConfig[] = [
   { id: 'upload', label: 'Upload', icon: Camera },
   { id: 'crop', label: 'Crop', icon: Crop },
   { id: 'background', label: 'Background', icon: Sparkles },
@@ -303,13 +303,13 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
+            {/* <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 dark:text-zinc-400"
               title={darkMode ? "Light Mode" : "Dark Mode"}
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+            </button> */}
             <button 
               onClick={() => setShowResetConfirm(true)}
               className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 dark:text-zinc-400"
