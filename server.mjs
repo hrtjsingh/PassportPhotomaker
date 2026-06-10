@@ -9,7 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = __dirname;
 const DIST = path.join(ROOT, 'dist');
 const LOCAL_ASSETS = path.join(DIST, 'bg-removal-assets');
 const IMGLY_CDN = 'https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist';
