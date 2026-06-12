@@ -109,10 +109,10 @@ export const BackgroundRemover: React.FC<BackgroundRemoverProps> = ({
           icon={!isAiProcessing ? <Zap className="w-4 h-4 fill-current" /> : undefined}
           description={!isAiProcessing ? 'Sharpest edges · removes background halos' : undefined}
         >
-          {isAiProcessing ? 'Processing…' : 'Best Quality'}
+          {isAiProcessing ? 'Processing…' : 'Remove Backgroud (HQ)'}
         </Button>
 
-        <Button
+        {/* <Button
           variant="secondary"
           size="lg"
           fullWidth
@@ -123,7 +123,7 @@ export const BackgroundRemover: React.FC<BackgroundRemoverProps> = ({
           description={!isProcessing ? 'Faster preview · lighter model' : undefined}
         >
           {isProcessing ? 'Processing…' : 'Fast Removal'}
-        </Button>
+        </Button> */}
       </div>
 
       <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center leading-relaxed">
