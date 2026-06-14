@@ -1,4 +1,4 @@
-import { getPixelsFromMm } from '../config/passportSizes';
+import { canvasToPngDataUrl, mmToPxAtDpi } from './printDpi';
 
 export async function generatePassportPhoto(
   imageSrc: string,
@@ -7,8 +7,9 @@ export async function generatePassportPhoto(
   backgroundColor: string = '#ffffff',
   upscaleFactor: number = 1
 ): Promise<string> {
-  const widthPx = getPixelsFromMm(widthMm) * upscaleFactor;
-  const heightPx = getPixelsFromMm(heightMm) * upscaleFactor;
+  const outputDpi = 300 * upscaleFactor;
+  const widthPx = mmToPxAtDpi(widthMm, outputDpi);
+  const heightPx = mmToPxAtDpi(heightMm, outputDpi);
 
   const canvas = document.createElement('canvas');
   canvas.width = widthPx;
@@ -17,20 +18,20 @@ export async function generatePassportPhoto(
 
   if (!ctx) throw new Error('Could not get canvas context');
 
-  // Fill background
   ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, widthPx, heightPx);
 
-  // Draw image
   const img = new Image();
   img.src = imageSrc;
   await new Promise((resolve) => (img.onload = resolve));
 
-  // Calculate aspect ratios to fit image properly (cover)
   const imgAspectRatio = img.width / img.height;
   const canvasAspectRatio = widthPx / heightPx;
 
-  let drawWidth, drawHeight, offsetX, offsetY;
+  let drawWidth: number;
+  let drawHeight: number;
+  let offsetX: number;
+  let offsetY: number;
 
   if (imgAspectRatio > canvasAspectRatio) {
     drawHeight = heightPx;
@@ -48,5 +49,5 @@ export async function generatePassportPhoto(
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
-  return canvas.toDataURL('image/png');
+  return canvasToPngDataUrl(canvas, outputDpi);
 }

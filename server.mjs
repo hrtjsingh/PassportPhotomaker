@@ -55,6 +55,17 @@ app.use('/bg-removal-assets', async (req, res, next) => {
   }
 });
 
+app.use((req, res, next) => {
+  if (
+    req.path === '/sw.js' ||
+    req.path === '/manifest.webmanifest' ||
+    req.path.startsWith('/workbox-')
+  ) {
+    res.setHeader('Cache-Control', 'no-cache');
+  }
+  next();
+});
+
 app.use(express.static(DIST, { index: false }));
 
 app.get('*', (_req, res) => {
@@ -63,7 +74,7 @@ app.get('*', (_req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   const hasLocal = fs.existsSync(path.join(LOCAL_ASSETS, 'resources.json'));
-  console.log(`SnapID → http://localhost:${PORT}`);
+  console.log(`SnapID Studio → http://localhost:${PORT}`);
   console.log(
     hasLocal
       ? 'Background removal assets: bundled in dist/bg-removal-assets/'
