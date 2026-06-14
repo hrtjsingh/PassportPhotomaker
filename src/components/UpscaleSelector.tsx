@@ -10,7 +10,7 @@ interface UpscaleSelectorProps {
 const OPTIONS = [
   { label: 'Standard', sublabel: '300 DPI — most print shops', value: 1 },
   { label: 'High Res', sublabel: '600 DPI — sharper detail', value: 2 },
-  { label: 'Ultra Res', sublabel: '1200 DPI — professional grade', value: 4 },
+  { label: 'Ultra Res', sublabel: '1200 DPI — true native render, largest files', value: 4 },
 ];
 
 export const UpscaleSelector: React.FC<UpscaleSelectorProps> = ({ value, onChange }) => {

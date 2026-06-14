@@ -17,6 +17,8 @@ interface StepProgressProps {
   completedSteps: Set<WizardStep>;
   onStepClick?: (step: WizardStep) => void;
   canNavigateTo?: (step: WizardStep) => boolean;
+  /** Force desktop pill layout (e.g. landing page preview) */
+  layout?: 'responsive' | 'desktop';
 }
 
 export function StepProgress({
@@ -25,6 +27,7 @@ export function StepProgress({
   completedSteps,
   onStepClick,
   canNavigateTo,
+  layout = 'responsive',
 }: StepProgressProps) {
   const currentIndex = steps.findIndex((s) => s.id === currentStep);
   const progressPct = ((currentIndex + 1) / steps.length) * 100;
@@ -32,6 +35,7 @@ export function StepProgress({
   return (
     <>
       {/* Mobile */}
+      {layout === 'responsive' && (
       <div className="lg:hidden w-full mb-6 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -47,7 +51,7 @@ export function StepProgress({
         </div>
         <div className="h-2 bg-zinc-200/80 dark:bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className="h-full bg-linear-to-r from-brand-600 to-indigo-500 transition-all duration-500 ease-out rounded-full"
+            className="h-full bg-linear-to-r from-brand-600 to-brand-800 transition-all duration-500 ease-out rounded-full"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -77,10 +81,14 @@ export function StepProgress({
           })}
         </div>
       </div>
+      )}
 
       {/* Desktop */}
       <nav
-        className="hidden lg:flex items-center gap-0.5 p-1 rounded-2xl bg-zinc-100/80 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700/60 w-full max-w-fit mx-auto"
+        className={cn(
+          'items-center gap-0.5 p-1 rounded-2xl bg-zinc-100/80 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700/60 w-full max-w-fit mx-auto',
+          layout === 'desktop' ? 'flex' : 'hidden lg:flex'
+        )}
         aria-label="Progress"
       >
         {steps.map((step) => {

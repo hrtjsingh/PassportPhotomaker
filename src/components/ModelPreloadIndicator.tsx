@@ -44,7 +44,7 @@ export function ModelPreloadIndicator() {
       {!isError && (
         <div className="mt-2 h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className="h-full bg-linear-to-r from-brand-600 to-indigo-500 transition-all duration-300 rounded-full"
+            className="h-full bg-linear-to-r from-brand-600 to-brand-800 transition-all duration-300 rounded-full"
             style={{ width: `${progress}%` }}
           />
         </div>
