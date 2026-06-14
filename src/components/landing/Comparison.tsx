@@ -55,33 +55,33 @@ export const Comparison = () => (
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="glass-card rounded-2xl overflow-hidden shadow-xl border border-white/10"
+        className="glass-card rounded-xl overflow-hidden shadow-xl border border-[#e8dcc8]/12"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-                <tr className="border-b border-white/[0.06] bg-zinc-900/50">
+                <tr className="border-b border-[#e8dcc8]/8 bg-snapid-bg-elevated/60">
                 <th className="px-6 py-4 text-sm font-semibold text-snapid-muted uppercase tracking-wider">
                   Feature
                 </th>
-                <th className="px-6 py-4 text-sm font-bold text-brand-300 bg-zinc-900/60 backdrop-blur-sm">{BRAND_NAME}</th>
+                <th className="px-6 py-4 text-sm font-bold text-brand-300 bg-snapid-bg-elevated/80 backdrop-blur-sm">{BRAND_NAME}</th>
                 <th className="px-6 py-4 text-sm font-semibold text-snapid-muted">Photo Booth</th>
                 <th className="px-6 py-4 text-sm font-semibold text-snapid-muted">Generic Online</th>
               </tr>
             </thead>
-              <tbody className="divide-y divide-white/[0.06]">
+              <tbody className="divide-y divide-[#e8dcc8]/8">
               {COMPARISON_ROWS.map((feature) => (
-                <tr key={feature.name} className="hover:bg-zinc-800/40 transition-colors">
+                <tr key={feature.name} className="hover:bg-snapid-bg-elevated/40 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <feature.icon className="w-4 h-4 text-snapid-muted" aria-hidden="true" />
                       <span className="font-medium text-snapid-text">{feature.name}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 bg-zinc-900/40 backdrop-blur-sm">
+                  <td className="px-6 py-4 bg-snapid-bg-elevated/50 backdrop-blur-sm">
                     <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" aria-hidden="true" />
-                      <span className="font-semibold text-emerald-400">{feature.snapid}</span>
+                      <Check className="w-4 h-4 text-brand-400 flex-shrink-0" aria-hidden="true" />
+                      <span className="font-semibold text-brand-300">{feature.snapid}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-snapid-muted">{feature.booth}</td>

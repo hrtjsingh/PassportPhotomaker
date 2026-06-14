@@ -17,7 +17,6 @@ interface StepProgressProps {
   completedSteps: Set<WizardStep>;
   onStepClick?: (step: WizardStep) => void;
   canNavigateTo?: (step: WizardStep) => boolean;
-  /** Force desktop pill layout (e.g. landing page preview) */
   layout?: 'responsive' | 'desktop';
 }
 
@@ -34,24 +33,23 @@ export function StepProgress({
 
   return (
     <>
-      {/* Mobile */}
       {layout === 'responsive' && (
       <div className="lg:hidden w-full mb-6 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-brand-600 text-white text-xs font-bold">
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white text-xs font-bold">
               {currentIndex + 1}
             </span>
             <div>
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{steps[currentIndex]?.label}</p>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Step {currentIndex + 1} of {steps.length}</p>
+              <p className="text-sm font-semibold text-snapid-text">{steps[currentIndex]?.label}</p>
+              <p className="text-[11px] text-snapid-muted">Step {currentIndex + 1} of {steps.length}</p>
             </div>
           </div>
-          <span className="text-xs font-medium text-brand-600 dark:text-brand-200">{Math.round(progressPct)}%</span>
+          <span className="text-xs font-medium text-brand-300">{Math.round(progressPct)}%</span>
         </div>
-        <div className="h-2 bg-zinc-200/80 dark:bg-zinc-800 rounded-full overflow-hidden">
+        <div className="h-2 bg-snapid-bg-elevated rounded-full overflow-hidden">
           <div
-            className="h-full bg-linear-to-r from-brand-600 to-brand-800 transition-all duration-500 ease-out rounded-full"
+            className="h-full bg-linear-to-r from-brand-600 to-brand-700 transition-all duration-500 ease-out rounded-full"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -69,8 +67,8 @@ export function StepProgress({
                 className={cn(
                   'h-1.5 flex-1 rounded-full transition-all',
                   active && 'bg-brand-600',
-                  !active && done && 'bg-brand-300 dark:bg-brand-700',
-                  !active && !done && 'bg-zinc-200 dark:bg-zinc-800',
+                  !active && done && 'bg-brand-300',
+                  !active && !done && 'bg-snapid-bg-elevated',
                   clickable && !active && 'cursor-pointer hover:opacity-80',
                   !clickable && 'cursor-default'
                 )}
@@ -83,10 +81,9 @@ export function StepProgress({
       </div>
       )}
 
-      {/* Desktop */}
       <nav
         className={cn(
-          'items-center gap-0.5 p-1 rounded-2xl bg-zinc-100/80 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700/60 w-full max-w-fit mx-auto',
+          'items-center gap-0.5 p-1 rounded-xl bg-snapid-bg-elevated/80 border border-[#e8dcc8]/10 w-full max-w-fit mx-auto',
           layout === 'desktop' ? 'flex' : 'hidden lg:flex'
         )}
         aria-label="Progress"
@@ -108,18 +105,18 @@ export function StepProgress({
               aria-label={`${step.label}${isDone ? ' (completed)' : ''}${isActive ? ' (current)' : ''}`}
               aria-current={isActive ? 'step' : undefined}
               className={cn(
-                'flex items-center gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0',
-                isActive && 'bg-white dark:bg-zinc-700 text-brand-700 dark:text-brand-200 shadow-sm ring-1 ring-brand-500/20',
-                !isActive && isDone && 'text-zinc-600 dark:text-zinc-300 hover:bg-white/60 dark:hover:bg-zinc-700/50',
-                !isActive && !isDone && 'text-zinc-400 dark:text-zinc-500',
+                'flex items-center gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0',
+                isActive && 'bg-snapid-bg text-brand-300 shadow-sm ring-1 ring-brand-500/20',
+                !isActive && isDone && 'text-snapid-muted hover:bg-snapid-bg/60',
+                !isActive && !isDone && 'text-snapid-muted/60',
                 clickable ? 'cursor-pointer' : 'cursor-default opacity-50'
               )}
             >
               <span className={cn(
                 'flex items-center justify-center w-5 h-5 rounded-md shrink-0',
                 isActive && 'bg-brand-600 text-white',
-                !isActive && isDone && 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400',
-                !isActive && !isDone && 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400'
+                !isActive && isDone && 'bg-brand-700/30 text-brand-300',
+                !isActive && !isDone && 'bg-snapid-bg text-snapid-muted'
               )}>
                 {isDone && !isActive ? <Check className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
               </span>

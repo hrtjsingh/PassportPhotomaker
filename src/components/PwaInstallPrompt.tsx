@@ -48,7 +48,7 @@ export function PwaInstallPrompt() {
 
   return (
     <div
-      className="fixed bottom-4 left-1/2 z-[90] w-[min(94vw,24rem)] -translate-x-1/2 rounded-2xl border border-white/10 bg-zinc-900/95 backdrop-blur-xl px-4 py-3.5 shadow-2xl shadow-black/40 safe-bottom"
+      className="fixed bottom-4 left-1/2 z-[90] w-[min(94vw,24rem)] -translate-x-1/2 rounded-xl border border-[#e8dcc8]/12 bg-snapid-bg/95 backdrop-blur-xl px-4 py-3.5 shadow-2xl shadow-black/40 safe-bottom"
       role="region"
       aria-label="Install app"
     >
@@ -57,8 +57,8 @@ export function PwaInstallPrompt() {
           <Download className="w-5 h-5 text-white" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-zinc-50">Install {BRAND_NAME}</p>
-          <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
+          <p className="text-sm font-semibold text-snapid-text">Install {BRAND_NAME}</p>
+          <p className="text-xs text-snapid-muted mt-0.5 leading-relaxed">
             Add to your home screen for quick access — works offline after first visit.
           </p>
           <div className="flex gap-2 mt-3">
@@ -72,7 +72,7 @@ export function PwaInstallPrompt() {
             <button
               type="button"
               onClick={dismiss}
-              className="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 text-xs font-medium transition-colors"
+              className="px-3 py-1.5 rounded-lg text-snapid-muted hover:text-snapid-text text-xs font-medium transition-colors"
             >
               Not now
             </button>
@@ -81,7 +81,7 @@ export function PwaInstallPrompt() {
         <button
           type="button"
           onClick={dismiss}
-          className="p-1 rounded-lg text-zinc-500 hover:text-zinc-300 shrink-0"
+          className="p-1 rounded-lg text-snapid-muted hover:text-snapid-text shrink-0"
           aria-label="Dismiss install prompt"
         >
           <X className="w-4 h-4" />

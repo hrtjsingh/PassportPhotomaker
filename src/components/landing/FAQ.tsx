@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ChevronDown } from 'lucide-react';
 import { BRAND_NAME } from '../../config/brand';
 import { staggerContainer, fadeInUp } from './animations';
+import { FrostedSectionBg } from './FrostedSectionBg';
 
 const FAQS = [
   {
@@ -43,8 +44,9 @@ export const FAQ = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="relative py-24 lg:py-32 frosted-section bg-zinc-900/35 backdrop-blur-xl" aria-labelledby="faq-heading">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="faq" className="relative py-24 lg:py-32 frosted-section grain-overlay" aria-labelledby="faq-heading">
+      <FrostedSectionBg mesh meshOpacity="opacity-35" />
+      <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -72,11 +74,11 @@ export const FAQ = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.05 }}
-              className="glass-card rounded-xl border border-white/10 overflow-hidden"
+              className="glass-card rounded-xl border border-[#e8dcc8]/12 overflow-hidden torii-accent"
             >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset"
+                className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-inset"
                 aria-expanded={openIndex === index}
                 aria-controls={`faq-answer-${index}`}
               >

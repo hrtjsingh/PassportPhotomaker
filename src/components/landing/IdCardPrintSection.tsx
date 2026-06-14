@@ -29,7 +29,7 @@ export const IdCardPrintSection = () => (
         >
           <motion.span
             variants={fadeInUp}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-900/50 text-brand-300 border border-brand-700/40 mb-5"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-900/50 text-brand-300 border border-brand-700/40 mb-5"
           >
             <CreditCard className="w-3.5 h-3.5" />
             New feature
@@ -63,17 +63,14 @@ export const IdCardPrintSection = () => (
           </motion.ul>
 
           <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-3">
-            <Link
-              to="/id-print"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-linear-to-r from-snapid-indigo to-snapid-violet text-white font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] transition-all"
-            >
+            <Link to="/id-print" className="btn-primary px-6 py-3.5">
               <CreditCard className="w-4 h-4" aria-hidden="true" />
               Open ID Print Sheet
               <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </Link>
             <a
               href="#how-it-works"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full glass-card text-snapid-text font-semibold hover:bg-zinc-800/80 transition-all"
+              className="btn-outline px-6 py-3.5"
             >
               Passport photos
             </a>
@@ -87,7 +84,7 @@ export const IdCardPrintSection = () => (
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
           className="relative"
         >
-          <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/30 border border-white/10">
+          <div className="glass-card rounded-xl p-6 sm:p-8 shadow-2xl shadow-black/30 border border-[#e8dcc8]/12 torii-accent">
             <p className="text-xs font-semibold text-snapid-muted uppercase tracking-wider mb-4 text-center">
               A4 print preview
             </p>

@@ -21,8 +21,8 @@ export const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ selected
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <label className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Background Color</label>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Choose a standard passport backdrop</p>
+        <label className="text-sm font-semibold text-snapid-text">Background Color</label>
+        <p className="text-xs text-snapid-muted mt-0.5">Choose a standard passport backdrop</p>
       </div>
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
         {COLORS.map((color) => {
@@ -38,7 +38,7 @@ export const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ selected
                 'w-11 h-11 md:w-12 md:h-12 rounded-xl border-2 transition-all flex items-center justify-center shadow-sm',
                 selected
                   ? 'border-brand-600 scale-105 ring-2 ring-brand-500/30'
-                  : 'border-zinc-200 dark:border-zinc-700 group-hover:border-zinc-300 dark:group-hover:border-zinc-600 group-hover:scale-105'
+                  : 'border-[#e8dcc8]/15 group-hover:border-brand-400/30 group-hover:scale-105'
               )}>
                 <div
                   className="w-8 h-8 md:w-9 md:h-9 rounded-lg border border-zinc-200/50 dark:border-zinc-600/50"
@@ -47,7 +47,7 @@ export const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ selected
               </div>
               <span className={cn(
                 'text-[10px] font-medium transition-colors',
-                selected ? 'text-brand-600 dark:text-brand-400' : 'text-zinc-500 dark:text-zinc-400'
+                selected ? 'text-brand-400' : 'text-snapid-muted'
               )}>
                 {color.name}
               </span>
@@ -64,7 +64,7 @@ export const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ selected
             'w-11 h-11 md:w-12 md:h-12 rounded-xl border-2 transition-all flex items-center justify-center shadow-sm overflow-hidden',
             isCustomColor
               ? 'border-brand-600 scale-105 ring-2 ring-brand-500/30'
-              : 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 group-hover:border-zinc-300 dark:group-hover:border-zinc-600 group-hover:scale-105'
+              : 'border-[#e8dcc8]/15 bg-snapid-bg-elevated group-hover:border-brand-400/30 group-hover:scale-105'
           )}>
             {isCustomColor ? (
               <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: selectedColor }}>
@@ -74,12 +74,12 @@ export const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ selected
                 )} />
               </div>
             ) : (
-              <Pipette className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+              <Pipette className="w-4 h-4 text-snapid-muted" />
             )}
           </div>
           <span className={cn(
             'text-[10px] font-medium transition-colors',
-            isCustomColor ? 'text-brand-600 dark:text-brand-400' : 'text-zinc-500 dark:text-zinc-400'
+            isCustomColor ? 'text-brand-400' : 'text-snapid-muted'
           )}>
             Custom
           </span>

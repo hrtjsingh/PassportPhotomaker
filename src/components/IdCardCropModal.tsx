@@ -66,7 +66,7 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-zinc-950/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-snapid-bg/80 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.97, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -76,26 +76,26 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
             aria-modal="true"
             aria-labelledby="id-crop-title"
           >
-            <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-white/10 shrink-0">
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[#e8dcc8]/10 shrink-0">
               <div>
-                <h2 id="id-crop-title" className="text-lg font-bold font-display text-zinc-50">
+                <h2 id="id-crop-title" className="text-lg font-bold font-display text-snapid-text">
                   Crop &amp; rotate — {title}
                 </h2>
-                <p className="text-xs text-zinc-400 mt-0.5">
+                <p className="text-xs text-snapid-muted mt-0.5">
                   Fit to {targetWidthMm} × {targetHeightMm} mm card
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onCancel}
-                className="p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                className="p-2 rounded-lg text-snapid-muted hover:text-snapid-text hover:bg-snapid-bg-elevated transition-colors"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="relative w-full aspect-[4/3] sm:aspect-video bg-zinc-950 shrink-0 touch-none">
+            <div className="relative w-full aspect-[4/3] sm:aspect-video bg-snapid-bg shrink-0 touch-none">
               <Cropper
                 image={imageSrc}
                 crop={crop}
@@ -121,16 +121,16 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
                 <button
                   type="button"
                   onClick={() => rotateBy(-90)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800/80 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-snapid-bg-elevated border border-[#e8dcc8]/10 text-xs font-semibold text-snapid-text hover:border-brand-400/25 transition-colors"
                 >
                   <RotateCcw className="w-4 h-4" />
                   −90°
                 </button>
-                <span className="text-xs font-mono text-zinc-400 w-14 text-center">{rotation}°</span>
+                <span className="text-xs font-mono text-snapid-muted w-14 text-center">{rotation}°</span>
                 <button
                   type="button"
                   onClick={() => rotateBy(90)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800/80 border border-zinc-700 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-snapid-bg-elevated border border-[#e8dcc8]/10 text-xs font-semibold text-snapid-text hover:border-brand-400/25 transition-colors"
                 >
                   +90°
                   <RotateCw className="w-4 h-4" />
@@ -139,8 +139,8 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-zinc-300">Zoom</span>
-                  <span className="font-mono text-zinc-500">{Math.round(zoom * 100)}%</span>
+                  <span className="font-medium text-snapid-text">Zoom</span>
+                  <span className="font-mono text-snapid-muted">{Math.round(zoom * 100)}%</span>
                 </div>
                 <input
                   type="range"
@@ -156,8 +156,8 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-zinc-300">Rotation</span>
-                  <span className="font-mono text-zinc-500">{rotation}°</span>
+                  <span className="font-medium text-snapid-text">Rotation</span>
+                  <span className="font-mono text-snapid-muted">{rotation}°</span>
                 </div>
                 <input
                   type="range"
@@ -172,7 +172,7 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 px-4 sm:px-6 py-4 border-t border-white/10 shrink-0">
+            <div className="grid grid-cols-2 gap-3 px-4 sm:px-6 py-4 border-t border-[#e8dcc8]/10 shrink-0">
               <Button variant="secondary" size="md" fullWidth onClick={onCancel} disabled={isApplying}>
                 Cancel
               </Button>

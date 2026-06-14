@@ -11,19 +11,19 @@ const COUNTRIES = [
 
 export const TrustBar = () => (
   <section
-    className="relative py-8 border-y border-white/[0.06] bg-zinc-900/40 backdrop-blur-xl"
+    className="relative py-8 border-y border-[#e8dcc8]/10 bg-snapid-bg-elevated/50 backdrop-blur-md"
     aria-label="Supported countries"
   >
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12">
-        <span className="text-sm font-semibold text-snapid-muted uppercase tracking-wider">Works for</span>
+        <span className="text-sm font-semibold text-snapid-muted uppercase tracking-widest font-display">Works for</span>
         <div className="flex flex-wrap justify-center gap-4 lg:gap-8">
           {COUNTRIES.map((country) => (
             <div
               key={country.code}
-              className="flex items-center gap-2 px-4 py-2 rounded-full glass-card hover:shadow-md transition-shadow"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg glass-card hover:border-brand-400/20 transition-colors"
             >
-              <Globe className="w-4 h-4 text-snapid-indigo" aria-hidden="true" />
+              <Globe className="w-4 h-4 text-brand-700" aria-hidden="true" />
               <span className="text-sm font-medium text-snapid-text">{country.name}</span>
               <span className="text-xs text-snapid-muted">{country.size}</span>
             </div>
@@ -32,15 +32,15 @@ export const TrustBar = () => (
       </div>
       <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm text-snapid-muted">
         <span className="flex items-center gap-1.5">
-          <Check className="w-4 h-4 text-emerald-500" aria-hidden="true" />
+          <Check className="w-4 h-4 text-brand-400" aria-hidden="true" />
           No account required
         </span>
         <span className="flex items-center gap-1.5">
-          <Check className="w-4 h-4 text-emerald-500" aria-hidden="true" />
+          <Check className="w-4 h-4 text-brand-400" aria-hidden="true" />
           No server upload
         </span>
         <span className="flex items-center gap-1.5">
-          <Check className="w-4 h-4 text-emerald-500" aria-hidden="true" />
+          <Check className="w-4 h-4 text-brand-400" aria-hidden="true" />
           No watermarks
         </span>
       </div>

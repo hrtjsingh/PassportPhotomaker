@@ -245,10 +245,10 @@ export default function IdCardPrint() {
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 px-1">
+            {/* <div className="flex items-center gap-2 px-1">
               <Layout className="w-4 h-4 text-brand-400" />
               <h2 className="text-sm font-semibold text-zinc-200">A4 preview</h2>
-            </div>
+            </div> */}
 
             <A4Preview
               pages={layout?.pages ?? []}
@@ -288,7 +288,7 @@ export default function IdCardPrint() {
 
       <footer className="mt-auto border-t border-white/8 py-6 px-4 safe-bottom">
         <div className="max-w-6xl mx-auto flex items-center justify-center gap-1.5 text-xs text-zinc-500">
-          <Shield className="w-3.5 h-3.5 text-emerald-500" />
+          <Shield className="w-3.5 h-3.5 text-brand-400" />
           All processing happens locally in your browser
         </div>
       </footer>

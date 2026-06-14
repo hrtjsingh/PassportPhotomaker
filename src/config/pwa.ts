@@ -1,7 +1,7 @@
 import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_SHORT } from './brand';
 
-export const PWA_THEME_COLOR = '#06060a';
-export const PWA_BACKGROUND_COLOR = '#06060a';
+export const PWA_THEME_COLOR = '#12100e';
+export const PWA_BACKGROUND_COLOR = '#12100e';
 
 export const PWA_MANIFEST = {
   name: BRAND_NAME,
