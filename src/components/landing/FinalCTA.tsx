@@ -42,10 +42,7 @@ export const FinalCTA = () => (
         </motion.p>
 
         <motion.div variants={fadeInUp}>
-          <a
-            href="/studio"
-            className="inline-flex items-center gap-3 px-10 py-5 rounded-full bg-gradient-to-r from-snapid-indigo to-snapid-violet text-white font-bold text-lg shadow-2xl shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-4 focus:ring-offset-snapid-bg"
-          >
+          <a href="/studio" className="btn-primary text-lg px-10 py-5">
             <Camera className="w-6 h-6" aria-hidden="true" />
             Create Your Photo Free
             <ArrowRight className="w-5 h-5" aria-hidden="true" />

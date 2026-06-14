@@ -17,9 +17,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variantStyles: Record<ButtonVariant, string> = {
   primary: 'btn-gradient border border-transparent',
   secondary:
-    'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 shadow-sm',
+    'bg-snapid-bg-elevated text-snapid-text border border-[#e8dcc8]/15 hover:bg-snapid-bg hover:border-brand-400/25 shadow-sm',
   ghost:
-    'bg-transparent text-zinc-600 dark:text-zinc-400 border border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100',
+    'bg-transparent text-snapid-muted border border-transparent hover:bg-snapid-bg-elevated hover:text-snapid-text',
   danger:
     'bg-red-600 text-white border border-transparent hover:bg-red-700 shadow-sm shadow-red-600/20',
 };
@@ -56,7 +56,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         className={cn(
           'inline-flex items-center justify-center font-semibold transition-all duration-200',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-snapid-bg',
           'disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none disabled:from-zinc-400 disabled:to-zinc-400',
           'active:scale-[0.98]',
           variantStyles[variant],

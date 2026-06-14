@@ -54,7 +54,7 @@ export const DemoShowcase = () => (
         <div className="mt-8 text-center">
           <Link
             to="/studio"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-full glass-card text-snapid-text font-semibold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-snapid-bg"
+            className="btn-outline text-lg"
           >
             <Sparkles className="w-5 h-5" aria-hidden="true" />
             Try it now — free

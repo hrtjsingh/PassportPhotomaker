@@ -34,9 +34,9 @@ export function StepFooter({
         'w-full max-w-2xl mx-auto flex flex-col items-stretch gap-3 sm:gap-4',
         'fixed bottom-0 inset-x-0 z-40 sm:static',
         'px-3 py-3 safe-bottom sm:px-0 sm:py-0',
-        'bg-black sm:bg-transparent',
+        'bg-snapid-bg/95 sm:bg-transparent',
         'backdrop-blur-xl sm:backdrop-blur-none',
-        'border-t border-zinc-800/80 sm:border-0',
+        'border-t border-[#e8dcc8]/10 sm:border-0',
         className
       )}
     >
@@ -77,7 +77,7 @@ export function StepFooter({
         <button
           type="button"
           onClick={secondaryAction.onClick}
-          className="text-sm font-medium text-zinc-400 hover:text-zinc-200 sm:text-zinc-500 sm:dark:text-zinc-400 sm:hover:text-brand-600 sm:dark:hover:text-brand-300 transition-colors mx-auto py-1.5 px-3 rounded-lg hover:bg-zinc-800 sm:hover:bg-zinc-100 sm:dark:hover:bg-zinc-800"
+          className="text-sm font-medium text-snapid-muted hover:text-brand-300 transition-colors mx-auto py-1.5 px-3 rounded-lg hover:bg-snapid-bg-elevated"
         >
           {secondaryAction.label}
         </button>

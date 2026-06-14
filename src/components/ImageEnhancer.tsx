@@ -135,7 +135,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
     <div className="flex flex-col items-center gap-6 md:gap-8 w-full max-w-4xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 w-full items-start">
         <div
-          className="relative w-full aspect-35/45 rounded-2xl overflow-hidden shadow-xl border border-zinc-200 dark:border-zinc-800"
+          className="relative w-full aspect-35/45 rounded-xl overflow-hidden shadow-xl border border-[#e8dcc8]/10"
           style={{ backgroundColor: selectedColor }}
         >
           <img src={previewImage} alt="Enhanced Preview" className="w-full h-full object-cover" />
@@ -145,28 +145,28 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
             </div>
           )}
           {hasEdited && !busy && (
-            <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-emerald-600/90 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
+            <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-brand-600/90 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">
               Enhanced
             </div>
           )}
           {busy && (
-            <div className="absolute inset-0 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4">
-              <Loader2 className="w-8 h-8 text-zinc-900 dark:text-zinc-50 animate-spin" />
+            <div className="absolute inset-0 bg-snapid-bg/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4">
+              <Loader2 className="w-8 h-8 text-snapid-text animate-spin" />
               {isAiProcessing && (
                 <>
-                  <div className="w-40 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="w-40 h-1.5 bg-snapid-bg-elevated rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-zinc-900 dark:bg-zinc-50 transition-all duration-300"
+                      className="h-full bg-brand-500 transition-all duration-300"
                       style={{ width: `${modelProgress}%` }}
                     />
                   </div>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 animate-pulse">
+                  <p className="text-sm font-bold text-snapid-text animate-pulse">
                     Enhancing… {modelProgress}%
                   </p>
                 </>
               )}
               {isProcessing && !isAiProcessing && (
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Applying filters…</p>
+                <p className="text-sm font-medium text-snapid-text">Applying filters…</p>
               )}
             </div>
           )}
@@ -175,7 +175,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
         <div className="flex flex-col gap-6 card-elevated p-6 md:p-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Enhance Quality</h3>
+              <h3 className="text-lg font-bold text-snapid-text">Enhance Quality</h3>
               {hasEdited && (
                 <Button
                   variant="ghost"
@@ -240,7 +240,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setLighting(val);
                   scheduleEnhance(brightness, contrast, sharpen, val, skinClear);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
+                className="w-full h-1.5 bg-snapid-bg-elevated rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
 
@@ -264,7 +264,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setBrightness(val);
                   scheduleEnhance(val, contrast, sharpen, lighting, skinClear);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
+                className="w-full h-1.5 bg-snapid-bg-elevated rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
 
@@ -288,7 +288,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setContrast(val);
                   scheduleEnhance(brightness, val, sharpen, lighting, skinClear);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
+                className="w-full h-1.5 bg-snapid-bg-elevated rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
 
@@ -312,7 +312,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setSkinClear(val);
                   scheduleEnhance(brightness, contrast, sharpen, lighting, val);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
+                className="w-full h-1.5 bg-snapid-bg-elevated rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
 
@@ -336,7 +336,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setSharpen(val);
                   scheduleEnhance(brightness, contrast, val, lighting, skinClear);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
+                className="w-full h-1.5 bg-snapid-bg-elevated rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
           </div>

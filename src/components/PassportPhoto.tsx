@@ -48,8 +48,8 @@ function StepHeader({ step, title, description }: { step: number; title: string;
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300">
         Step {step} of {STEPS.length}
       </span>
-      <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 font-display">{title}</h2>
-      <p className="text-sm md:text-base text-zinc-500 dark:text-zinc-400 leading-relaxed">{description}</p>
+      <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-snapid-text font-display">{title}</h2>
+      <p className="text-sm md:text-base text-snapid-muted leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -312,14 +312,14 @@ export default function PassportPhoto() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col text-zinc-900 dark:text-zinc-50 font-sans transition-colors duration-300">
+    <div className="relative min-h-screen flex flex-col text-snapid-text font-sans transition-colors duration-300">
       <PageBackground />
       {/* Header */}
       <header className="sticky top-0 z-50 glass-header px-3 sm:px-4 md:px-6 py-3 safe-top">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 lg:gap-3">
           <Link to="/" className="group shrink-0 text-left">
             <BrandLogo size="md" />
-            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 hidden xl:block mt-0.5 ml-11">{BRAND_TAGLINE}</p>
+            <p className="text-[10px] text-snapid-muted hidden xl:block mt-0.5 ml-11">{BRAND_TAGLINE}</p>
           </Link>
           
           <div className="hidden lg:flex flex-1 min-w-0 justify-center px-2">
@@ -337,7 +337,7 @@ export default function PassportPhoto() {
           <div className="flex items-center gap-1 shrink-0">
             <Link
               to="/id-print"
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-zinc-400 hover:text-brand-300 hover:bg-zinc-800/60 transition-colors touch-target"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-snapid-muted hover:text-brand-300 hover:bg-snapid-bg-elevated/60 transition-colors touch-target"
               title="ID card print sheet"
             >
               <CreditCard className="w-4 h-4 shrink-0" aria-hidden="true" />
@@ -346,7 +346,7 @@ export default function PassportPhoto() {
             {currentStep !== 'upload' && (
               <button 
                 onClick={() => setShowResetConfirm(true)}
-                className="p-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors text-zinc-500 dark:text-zinc-400 touch-target"
+                className="p-2.5 hover:bg-snapid-bg-elevated rounded-lg transition-colors text-snapid-muted touch-target"
                 title="Start over"
                 aria-label="Start over"
               >
@@ -391,10 +391,10 @@ export default function PassportPhoto() {
                     <Shield className="w-3.5 h-3.5" />
                     100% private — runs in your browser
                   </span>
-                  <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 font-display leading-[1.15] px-1">
+                  <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight text-snapid-text font-display leading-[1.15] px-1">
                     Print-ready ID photos in <span className="gradient-text">minutes</span>
                   </h1>
-                  <p className="text-sm sm:text-base md:text-lg text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto leading-relaxed px-1">
+                  <p className="text-sm sm:text-base md:text-lg text-snapid-muted max-w-xl mx-auto leading-relaxed px-1">
                     {BRAND_DESCRIPTION}
                   </p>
                 </div>
@@ -409,8 +409,8 @@ export default function PassportPhoto() {
                       <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center mb-3">
                         <item.icon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                       </div>
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-50">{item.label}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{item.desc}</p>
+                      <p className="font-semibold text-snapid-text">{item.label}</p>
+                      <p className="text-xs text-snapid-muted mt-1">{item.desc}</p>
                     </div>
                   ))}
                 </section>
@@ -482,8 +482,8 @@ export default function PassportPhoto() {
                     <div className="space-y-6">
                       <BackgroundSelector selectedColor={bgColor} onChange={setBgColor} />
                       
-                      <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-700">
-                        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-3">Live preview</p>
+                      <div className="p-4 rounded-lg bg-snapid-bg-elevated/60 border border-[#e8dcc8]/10">
+                        <p className="text-xs font-semibold text-snapid-muted mb-3">Live preview</p>
                         <div className="flex items-center gap-4">
                           <div 
                             className="w-16 md:w-20 aspect-35/45 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm overflow-hidden"
@@ -498,8 +498,8 @@ export default function PassportPhoto() {
                             )}
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Live Preview</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">The background color will be applied behind the subject.</p>
+                            <p className="text-sm font-medium text-snapid-text">Live Preview</p>
+                            <p className="text-xs text-snapid-muted">The background color will be applied behind the subject.</p>
                           </div>
                         </div>
                       </div>
@@ -566,7 +566,7 @@ export default function PassportPhoto() {
                   </div>
 
                   <div className="flex flex-col items-center gap-4 order-1 lg:order-2">
-                    <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Passport preview</p>
+                    <p className="text-xs font-semibold text-snapid-muted">Passport preview</p>
                     <div className="relative group">
                       <div className="absolute -inset-6 bg-brand-500/10 rounded-[2rem] blur-2xl group-hover:bg-brand-500/15 transition-all" />
                       <div 
@@ -580,10 +580,10 @@ export default function PassportPhoto() {
                       </div>
                     </div>
                     <div className="mt-4 text-center">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                      <p className="text-sm font-semibold text-snapid-text">
                         {selectedSize.id === 'custom' ? `${customWidth}mm × ${customHeight}mm` : selectedSize.description}
                       </p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Final Print Dimensions</p>
+                      <p className="text-xs text-snapid-muted">Final Print Dimensions</p>
                     </div>
                   </div>
                 </div>
@@ -642,7 +642,7 @@ export default function PassportPhoto() {
       {/* Reset Confirmation Modal */}
       <AnimatePresence>
         {showResetConfirm && (
-          <div className="fixed inset-0 z-100 flex items-end sm:items-center justify-center sm:p-4 bg-zinc-950/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-100 flex items-end sm:items-center justify-center sm:p-4 bg-snapid-bg/70 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -650,7 +650,7 @@ export default function PassportPhoto() {
               className="card-elevated p-6 md:p-8 w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl safe-bottom"
             >
               <h3 className="text-xl font-bold mb-2 font-display">Start over?</h3>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-sm leading-relaxed">
+              <p className="text-snapid-muted mb-6 text-sm leading-relaxed">
                 All progress will be lost — uploaded photo, crop, and settings.
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -667,11 +667,11 @@ export default function PassportPhoto() {
       </AnimatePresence>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-zinc-200/60 dark:border-zinc-800/60 py-6 sm:py-8 px-3 sm:px-4 md:px-6 safe-bottom">
+      <footer className="mt-auto border-t border-[#e8dcc8]/10 py-6 sm:py-8 px-3 sm:px-4 md:px-6 safe-bottom">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
           <BrandLogo size="sm" />
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-emerald-600" />
+          <p className="text-xs text-snapid-muted text-center flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-brand-400" />
             All processing happens locally in your browser
           </p>
         </div>

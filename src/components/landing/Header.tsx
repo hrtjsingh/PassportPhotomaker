@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useReducedMotion } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import { BRAND_NAME } from '../../config/brand';
 import { BrandLogo } from '../BrandLogo';
 import { cn } from '../../utils/cn';
 import { NAV_LINKS } from './constants';
+
+const MOBILE_HEADER_OFFSET = 72;
 
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -19,13 +21,45 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isMobileMenuOpen]);
+
+  const scrollToHash = useCallback(
+    (hash: string) => {
+      const id = hash.replace(/^#/, '');
+      const el = document.getElementById(id);
+      if (!el) return;
+      const top = el.getBoundingClientRect().top + window.scrollY - MOBILE_HEADER_OFFSET;
+      window.scrollTo({ top, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    },
+    [prefersReducedMotion]
+  );
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      setIsMobileMenuOpen(false);
+      requestAnimationFrame(() => scrollToHash(href));
+    } else {
+      setIsMobileMenuOpen(false);
+    }
+  };
+
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
   return (
     <header
       className={cn(
         'fixed top-0 left-0 right-0 z-50 border-b',
         'transition-[background-color,box-shadow,border-color,backdrop-filter] duration-300 ease-out',
         isScrolled
-          ? 'bg-zinc-900/60 backdrop-blur-xl border-white/[0.06] shadow-lg shadow-black/25'
+          ? 'bg-snapid-bg/80 backdrop-blur-xl border-[#e8dcc8]/10 shadow-lg shadow-black/25'
           : 'border-transparent bg-transparent shadow-none'
       )}
       role="banner"
@@ -44,23 +78,20 @@ export const Header = () => {
                 className="text-sm font-medium text-snapid-muted hover:text-snapid-text transition-colors relative group"
               >
                 {link.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-snapid-indigo to-snapid-violet transition-all duration-300 group-hover:w-full" />
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-500 transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
           </nav>
 
           <div className="flex items-center gap-4">
-            <a
-              href="/studio"
-              className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-snapid-indigo to-snapid-violet text-white text-sm font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            >
+            <a href="/studio" className="hidden sm:inline-flex btn-primary text-sm px-5 py-2.5">
               Start Free
               <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </a>
 
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-zinc-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="lg:hidden p-2 rounded-lg hover:bg-snapid-bg-elevated transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500"
               aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMobileMenuOpen}
             >
@@ -70,43 +101,45 @@ export const Header = () => {
         </div>
       </div>
 
-      <motion.div
-        initial={false}
-        animate={isMobileMenuOpen ? 'visible' : 'hidden'}
-        variants={{
-          visible: { opacity: 1, height: 'auto' },
-          hidden: { opacity: 0, height: 0 },
-        }}
-        transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
-        className="lg:hidden overflow-hidden glass-card border-t border-white/10"
-      >
-        <nav className="px-4 py-6 space-y-4" role="navigation" aria-label="Mobile navigation">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block text-base font-medium text-snapid-text hover:text-snapid-indigo transition-colors"
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.nav
+            key="mobile-menu"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+            className="lg:hidden glass-card border-t border-white/10 px-4 py-6 space-y-4"
+            role="navigation"
+            aria-label="Mobile navigation"
+          >
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={(e) => handleNavClick(e, link.href)}
+                className="block py-1 text-base font-medium text-snapid-text hover:text-brand-400 transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
+            <Link
+              to="/id-print"
+              onClick={closeMobileMenu}
+              className="block py-1 text-base font-medium text-snapid-text hover:text-brand-400 transition-colors"
             >
-              {link.label}
-            </a>
-          ))}
-          <Link
-            to="/id-print"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block text-base font-medium text-snapid-text hover:text-snapid-indigo transition-colors"
-          >
-            ID Card Print
-          </Link>
-          <Link
-            to="/studio"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block w-full text-center px-5 py-3 rounded-full bg-gradient-to-r from-snapid-indigo to-snapid-violet text-white font-semibold shadow-lg mt-4"
-          >
-            Start Free
-          </Link>
-        </nav>
-      </motion.div>
+              ID Card Print
+            </Link>
+            <Link
+              to="/studio"
+              onClick={closeMobileMenu}
+              className="block w-full text-center btn-primary mt-4"
+            >
+              Start Free
+            </Link>
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </header>
   );
 };

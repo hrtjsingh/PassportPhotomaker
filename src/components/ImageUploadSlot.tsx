@@ -172,7 +172,7 @@ export const ImageUploadSlot: React.FC<ImageUploadSlotProps> = ({
       </div>
 
       <div className="flex items-center gap-1.5 text-[11px] text-zinc-500">
-        <Shield className="w-3 h-3 text-emerald-500" />
+        <Shield className="w-3 h-3 text-brand-400" />
         <span>Processed locally</span>
       </div>
     </div>
