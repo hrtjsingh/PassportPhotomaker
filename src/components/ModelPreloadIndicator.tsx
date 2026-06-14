@@ -12,10 +12,10 @@ export function ModelPreloadIndicator() {
 
   return (
     <div
-      className={`fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[min(92vw,24rem)] rounded-xl border px-4 py-3 shadow-lg backdrop-blur-md ${
+      className={`fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[min(94vw,24rem)] rounded-2xl border px-4 py-3.5 shadow-xl backdrop-blur-md mb-[env(safe-area-inset-bottom)] ${
         isError
           ? 'border-red-200 bg-red-50/95 dark:border-red-900 dark:bg-red-950/90'
-          : 'border-zinc-200 bg-white/95 dark:border-zinc-700 dark:bg-zinc-900/95'
+          : 'border-brand-200/60 bg-white/95 dark:border-brand-800/40 dark:bg-zinc-900/95'
       }`}
     >
       <div className="flex items-center gap-3">
@@ -44,7 +44,7 @@ export function ModelPreloadIndicator() {
       {!isError && (
         <div className="mt-2 h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className="h-full bg-zinc-900 dark:bg-zinc-50 transition-all duration-300"
+            className="h-full bg-linear-to-r from-brand-600 to-indigo-500 transition-all duration-300 rounded-full"
             style={{ width: `${progress}%` }}
           />
         </div>

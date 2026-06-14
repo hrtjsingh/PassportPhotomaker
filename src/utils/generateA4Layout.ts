@@ -13,18 +13,29 @@
 //
 export type PrintDPI = number; // 300 | 600 | 1200
 
+export interface A4LayoutResult {
+  pages: string[];
+  photosPerPage: number;
+  totalPages: number;
+  totalCopies: number;
+}
+
 interface DPIConfig {
   canvasWidth: number;
   canvasHeight: number;
-  renderDPI: number;   // actual pixel DPI used for canvas
-  metaDPI: number;   // DPI written into PNG metadata
+  renderDPI: number;
+  metaDPI: number;
 }
 
 const DPI_CONFIG: Record<PrintDPI, DPIConfig> = {
   300: { canvasWidth: 2480, canvasHeight: 3508, renderDPI: 300, metaDPI: 300 },
   600: { canvasWidth: 4961, canvasHeight: 7016, renderDPI: 600, metaDPI: 600 },
-  1200: { canvasWidth: 2480, canvasHeight: 3508, renderDPI: 300, metaDPI: 1200 }, // ← safe canvas, metadata trick
+  1200: { canvasWidth: 2480, canvasHeight: 3508, renderDPI: 300, metaDPI: 1200 },
 };
+
+const COLS = 5;
+const PAGE_PADDING_MM = 5;
+const PHOTO_MARGIN_MM = 5;
 
 /** mm → pixels at a given DPI */
 function mmToPx(mm: number, dpi: number): number {
@@ -32,7 +43,6 @@ function mmToPx(mm: number, dpi: number): number {
 }
 
 // ─── PNG pHYs chunk injection ─────────────────────────────────────────────────
-// Embeds pixel-per-unit (DPI) metadata so print software honours the resolution.
 
 function crc32(buf: Uint8Array): number {
   const table = makeCrcTable();
@@ -59,29 +69,21 @@ function uint32BE(val: number): Uint8Array {
   return new Uint8Array([(val >>> 24) & 0xff, (val >>> 16) & 0xff, (val >>> 8) & 0xff, val & 0xff]);
 }
 
-/**
- * Injects a pHYs chunk into a raw PNG ArrayBuffer.
- * pHYs chunk stores pixels-per-unit; unit=1 means pixels per metre.
- * DPI × (1000/25.4) = pixels per metre.
- */
 function injectPngDPI(pngBuffer: ArrayBuffer, dpi: number): Uint8Array {
   const src = new Uint8Array(pngBuffer);
-  const ppm = Math.round(dpi * (1000 / 25.4)); // pixels per metre
+  const ppm = Math.round(dpi * (1000 / 25.4));
 
-  // Build pHYs chunk: 4B length + 4B type + 9B data + 4B CRC
   const type = new TextEncoder().encode('pHYs');
   const data = new Uint8Array(9);
-  data.set(uint32BE(ppm), 0);   // X pixels per unit
-  data.set(uint32BE(ppm), 4);   // Y pixels per unit
-  data[8] = 1;                  // unit: metre
+  data.set(uint32BE(ppm), 0);
+  data.set(uint32BE(ppm), 4);
+  data[8] = 1;
 
   const chunkBody = new Uint8Array([...type, ...data]);
   const crc = uint32BE(crc32(chunkBody));
   const length = uint32BE(9);
-
   const phys = new Uint8Array([...length, ...chunkBody, ...crc]);
 
-  // Insert pHYs right after the PNG signature (8 bytes) + IHDR chunk (4+4+13+4 = 25 bytes)
   const insertAt = 8 + 25;
   const out = new Uint8Array(src.length + phys.length);
   out.set(src.slice(0, insertAt), 0);
@@ -102,6 +104,54 @@ async function canvasToArrayBuffer(canvas: HTMLCanvasElement): Promise<ArrayBuff
   });
 }
 
+async function canvasToPageDataUrl(
+  canvas: HTMLCanvasElement,
+  renderDPI: number,
+  metaDPI: number
+): Promise<string> {
+  if (metaDPI !== renderDPI) {
+    const pngBuffer = await canvasToArrayBuffer(canvas);
+    const pngWithDPI = injectPngDPI(pngBuffer, metaDPI);
+    const blob = new Blob([pngWithDPI], { type: 'image/png' });
+    return URL.createObjectURL(blob);
+  }
+  return canvas.toDataURL('image/jpeg', 0.97);
+}
+
+function drawPhotoOnPage(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  indexOnPage: number,
+  fittedPhotoWidth: number,
+  fittedPhotoHeight: number,
+  paddingPx: number,
+  marginPx: number,
+  scaleFactor: number
+) {
+  const col = indexOnPage % COLS;
+  const row = Math.floor(indexOnPage / COLS);
+  const x = paddingPx + col * (fittedPhotoWidth + marginPx);
+  const y = paddingPx + row * (fittedPhotoHeight + marginPx);
+
+  ctx.drawImage(img, x, y, fittedPhotoWidth, fittedPhotoHeight);
+
+  ctx.strokeStyle = '#cccccc';
+  ctx.lineWidth = 2 * scaleFactor;
+  ctx.strokeRect(x, y, fittedPhotoWidth, fittedPhotoHeight);
+
+  ctx.save();
+  ctx.strokeStyle = '#aaaaaa';
+  ctx.lineWidth = 1 * scaleFactor;
+  ctx.setLineDash([6 * scaleFactor, 4 * scaleFactor]);
+  ctx.strokeRect(
+    x - scaleFactor,
+    y - scaleFactor,
+    fittedPhotoWidth + 2 * scaleFactor,
+    fittedPhotoHeight + 2 * scaleFactor
+  );
+  ctx.restore();
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function generateA4Layout(
@@ -110,33 +160,27 @@ export async function generateA4Layout(
   photoHeightMm: number,
   numCopies: number,
   dpi: PrintDPI = 300
-): Promise<string> {
-
+): Promise<A4LayoutResult> {
   const { canvasWidth, canvasHeight, renderDPI, metaDPI } = DPI_CONFIG[dpi];
 
-  const marginPx = mmToPx(5, renderDPI);
-  const paddingPx = mmToPx(5, renderDPI);
+  const paddingPx = mmToPx(PAGE_PADDING_MM, renderDPI);
+  const marginPx = mmToPx(PHOTO_MARGIN_MM, renderDPI);
 
-  const COLS = 5;
   const usableWidth = canvasWidth - 2 * paddingPx;
   const fittedPhotoWidth = Math.floor((usableWidth - (COLS - 1) * marginPx) / COLS);
 
   const aspectRatio = photoHeightMm / photoWidthMm;
   const fittedPhotoHeight = Math.round(fittedPhotoWidth * aspectRatio);
 
-  // ── Canvas ────────────────────────────────────────────────────────────────
-  const canvas = document.createElement('canvas');
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Could not get canvas context');
+  const usableHeight = canvasHeight - 2 * paddingPx;
+  const maxRows = Math.max(
+    1,
+    Math.floor((usableHeight + marginPx) / (fittedPhotoHeight + marginPx))
+  );
+  const photosPerPage = COLS * maxRows;
+  const totalPages = Math.max(1, Math.ceil(numCopies / photosPerPage));
+  const scaleFactor = renderDPI / 300;
 
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
-  // ── Load image ────────────────────────────────────────────────────────────
   const img = new Image();
   img.src = passportPhotoSrc;
   await new Promise<void>((resolve, reject) => {
@@ -144,49 +188,43 @@ export async function generateA4Layout(
     img.onerror = () => reject(new Error('Failed to load passport photo'));
   });
 
-  // Scale guides to look the same physical size regardless of renderDPI
-  const scaleFactor = renderDPI / 300;
+  const pages: string[] = [];
 
-  // ── Grid ──────────────────────────────────────────────────────────────────
-  for (let i = 0; i < numCopies; i++) {
-    const col = i % COLS;
-    const row = Math.floor(i / COLS);
+  for (let page = 0; page < totalPages; page++) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
 
-    const x = paddingPx + col * (fittedPhotoWidth + marginPx);
-    const y = paddingPx + row * (fittedPhotoHeight + marginPx);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
-    if (y + fittedPhotoHeight > canvasHeight - paddingPx) break;
+    const startCopy = page * photosPerPage;
+    const endCopy = Math.min(numCopies, startCopy + photosPerPage);
 
-    ctx.drawImage(img, x, y, fittedPhotoWidth, fittedPhotoHeight);
+    for (let i = startCopy; i < endCopy; i++) {
+      drawPhotoOnPage(
+        ctx,
+        img,
+        i - startCopy,
+        fittedPhotoWidth,
+        fittedPhotoHeight,
+        paddingPx,
+        marginPx,
+        scaleFactor
+      );
+    }
 
-    ctx.strokeStyle = '#cccccc';
-    ctx.lineWidth = 2 * scaleFactor;
-    ctx.strokeRect(x, y, fittedPhotoWidth, fittedPhotoHeight);
-
-    ctx.save();
-    ctx.strokeStyle = '#aaaaaa';
-    ctx.lineWidth = 1 * scaleFactor;
-    ctx.setLineDash([6 * scaleFactor, 4 * scaleFactor]);
-    ctx.strokeRect(
-      x - scaleFactor, y - scaleFactor,
-      fittedPhotoWidth + 2 * scaleFactor,
-      fittedPhotoHeight + 2 * scaleFactor
-    );
-    ctx.restore();
+    pages.push(await canvasToPageDataUrl(canvas, renderDPI, metaDPI));
   }
 
-  // ── Output ────────────────────────────────────────────────────────────────
-  // For 1200 DPI: render at 300 DPI canvas then inject DPI metadata into PNG.
-  // This tells print software to treat each pixel as 1/1200 inch → same
-  // physical output size but the printer uses its full 1200 DPI resolution.
-  if (metaDPI !== renderDPI) {
-    const pngBuffer = await canvasToArrayBuffer(canvas);
-    const pngWithDPI = injectPngDPI(pngBuffer, metaDPI);
-    //@ts-ignore
-    const blob = new Blob([pngWithDPI], { type: 'image/png' });
-    return URL.createObjectURL(blob);   // returns object URL instead of dataURL (more memory-efficient)
-  }
-
-  // 300 / 600 DPI: JPEG is fine (no metadata injection needed, printers use file size heuristics)
-  return canvas.toDataURL('image/jpeg', 0.97);
+  return {
+    pages,
+    photosPerPage,
+    totalPages,
+    totalCopies: numCopies,
+  };
 }

@@ -15,14 +15,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary:
-    'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 border border-transparent shadow-sm',
+  primary: 'btn-gradient border border-transparent',
   secondary:
-    'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm',
+    'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 shadow-sm',
   ghost:
     'bg-transparent text-zinc-600 dark:text-zinc-400 border border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100',
   danger:
-    'bg-red-600 text-white border border-transparent hover:bg-red-700 shadow-sm',
+    'bg-red-600 text-white border border-transparent hover:bg-red-700 shadow-sm shadow-red-600/20',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -57,9 +56,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         className={cn(
           'inline-flex items-center justify-center font-semibold transition-all duration-200',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/40 dark:focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950',
-          'disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none',
-          'active:scale-[0.99]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950',
+          'disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none disabled:from-zinc-400 disabled:to-zinc-400',
+          'active:scale-[0.98]',
           variantStyles[variant],
           withDescription ? 'py-3 h-auto flex-col gap-1' : sizeStyles[size],
           fullWidth && 'w-full',
@@ -76,7 +75,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           {children}
         </span>
         {description && (
-          <span className="text-[11px] font-normal opacity-65 leading-tight text-center">
+          <span className="text-[11px] font-normal opacity-80 leading-tight text-center">
             {description}
           </span>
         )}

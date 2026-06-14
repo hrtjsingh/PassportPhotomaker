@@ -29,11 +29,22 @@ export function StepFooter({
   className,
 }: StepFooterProps) {
   return (
-    <div className={cn('w-full max-w-2xl mx-auto flex flex-col items-stretch gap-4', className)}>
+    <div
+      className={cn(
+        'w-full max-w-2xl mx-auto flex flex-col items-stretch gap-3 sm:gap-4',
+        'fixed bottom-0 inset-x-0 z-40 sm:static',
+        'px-3 py-3 safe-bottom sm:px-0 sm:py-0',
+        'bg-black sm:bg-transparent',
+        'backdrop-blur-xl sm:backdrop-blur-none',
+        'border-t border-zinc-800/80 sm:border-0',
+        className
+      )}
+    >
       {continueHint && continueDisabled && (
-        <p className="text-xs text-center text-amber-700 dark:text-amber-400 font-medium px-2 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/50">
-          {continueHint}
-        </p>
+        <div className="flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300 font-medium px-3.5 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50">
+          <span className="shrink-0 w-5 h-5 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center text-[10px] font-bold">!</span>
+          <span>{continueHint}</span>
+        </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -66,7 +77,7 @@ export function StepFooter({
         <button
           type="button"
           onClick={secondaryAction.onClick}
-          className="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 underline-offset-4 hover:underline transition-colors mx-auto py-1"
+          className="text-sm font-medium text-zinc-400 hover:text-zinc-200 sm:text-zinc-500 sm:dark:text-zinc-400 sm:hover:text-brand-600 sm:dark:hover:text-brand-300 transition-colors mx-auto py-1.5 px-3 rounded-lg hover:bg-zinc-800 sm:hover:bg-zinc-100 sm:dark:hover:bg-zinc-800"
         >
           {secondaryAction.label}
         </button>

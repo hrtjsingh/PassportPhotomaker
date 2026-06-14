@@ -16,39 +16,42 @@ export const DownloadButtons: React.FC<DownloadButtonsProps> = ({
   disabled,
 }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl mx-auto mt-6 md:mt-8">
-      <Button
-        variant="secondary"
-        size="lg"
-        fullWidth
-        disabled={disabled}
-        onClick={onDownloadPng}
-        icon={<Download className="w-4 h-4" />}
-      >
-        Download PNG
-      </Button>
-
+    <div className="w-full max-w-2xl mx-auto space-y-4">
       <Button
         variant="primary"
         size="lg"
         fullWidth
         disabled={disabled}
         onClick={onDownloadPdf}
-        icon={<FileText className="w-4 h-4" />}
+        icon={<FileText className="w-5 h-5" />}
+        description="Best for printing at any shop"
       >
         Download PDF
       </Button>
 
-      <Button
-        variant="secondary"
-        size="lg"
-        fullWidth
-        disabled={disabled}
-        onClick={onPrint}
-        icon={<Printer className="w-4 h-4" />}
-      >
-        Print A4
-      </Button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Button
+          variant="secondary"
+          size="lg"
+          fullWidth
+          disabled={disabled}
+          onClick={onDownloadPng}
+          icon={<Download className="w-4 h-4" />}
+        >
+          Download PNG
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="lg"
+          fullWidth
+          disabled={disabled}
+          onClick={onPrint}
+          icon={<Printer className="w-4 h-4" />}
+        >
+          Print Now
+        </Button>
+      </div>
     </div>
   );
 };

@@ -27,7 +27,7 @@ export const CropEditor: React.FC<CropEditorProps> = ({
 
   return (
     <div className="flex flex-col gap-4 md:gap-6 w-full max-w-2xl mx-auto">
-      <div className="relative w-full aspect-square md:aspect-video bg-zinc-900 dark:bg-zinc-950 rounded-2xl overflow-hidden shadow-xl border border-zinc-200 dark:border-zinc-800">
+      <div className="relative w-full aspect-4/5 sm:aspect-square md:aspect-video bg-zinc-900 dark:bg-zinc-950 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl border border-zinc-200 dark:border-zinc-800 touch-none">
         <Cropper
           image={image}
           crop={crop}
@@ -60,7 +60,7 @@ export const CropEditor: React.FC<CropEditorProps> = ({
         )}
       </div>
       
-      <div className="bg-white dark:bg-zinc-900 p-4 md:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-4">
+      <div className="card p-4 md:p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
             <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Zoom Level</label>
@@ -76,7 +76,7 @@ export const CropEditor: React.FC<CropEditorProps> = ({
           step={0.1}
           aria-labelledby="Zoom"
           onChange={(e) => setZoom(Number(e.target.value))}
-          className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-900 dark:accent-zinc-50"
+          className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600"
         />
         <p className="text-[10px] md:text-xs text-zinc-500 dark:text-zinc-400 italic">
           Tip: Center your face within the grid for best results.

@@ -1,5 +1,5 @@
 {
-  "name": "Passport Photo Maker",
-  "description": "Create professional passport-sized photos with background removal and A4 print layouts.",
+  "name": "SnapID",
+  "description": "Create print-ready passport and ID photos with AI background removal and A4 print layouts — 100% in your browser.",
   "requestFramePermissions": []
 }

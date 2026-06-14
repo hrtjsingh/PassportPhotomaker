@@ -1,6 +1,7 @@
 import React from 'react';
 import { PASSPORT_SIZES, PassportSize } from '../config/passportSizes';
-import { ChevronDown } from 'lucide-react';
+import { Ruler } from 'lucide-react';
+import { parseDigitsInput } from '../utils/numericInput';
 
 interface SizeSelectorProps {
   selectedId: string;
@@ -10,8 +11,8 @@ interface SizeSelectorProps {
   onCustomChange?: (w: number, h: number) => void;
 }
 
-export const SizeSelector: React.FC<SizeSelectorProps> = ({ 
-  selectedId, 
+export const SizeSelector: React.FC<SizeSelectorProps> = ({
+  selectedId,
   onChange,
   customWidth,
   customHeight,
@@ -21,49 +22,81 @@ export const SizeSelector: React.FC<SizeSelectorProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Passport Dimension</label>
-        <div className="relative">
-          <select
-            value={selectedId}
-            onChange={(e) => {
-              const size = PASSPORT_SIZES.find(s => s.id === e.target.value);
-              if (size) onChange(size);
-            }}
-            className="w-full appearance-none bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 pr-10 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-zinc-50/10 transition-all"
-          >
-            {PASSPORT_SIZES.map((size) => (
-              <option key={size.id} value={size.id} className="dark:bg-zinc-800">
-                {size.name} ({size.description})
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center">
+          <Ruler className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+        </div>
+        <div>
+          <label className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Passport Size</label>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Select your country's standard</p>
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-2">
+        {PASSPORT_SIZES.map((size) => {
+          const selected = selectedId === size.id;
+          return (
+            <button
+              key={size.id}
+              onClick={() => onChange(size)}
+              className={`flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${
+                selected
+                  ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-500 ring-1 ring-brand-500/20'
+                  : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
+              }`}
+            >
+              <div>
+                <span className={`text-sm font-semibold block ${selected ? 'text-brand-700 dark:text-brand-300' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                  {size.name}
+                </span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">{size.description}</span>
+              </div>
+              {selected && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 bg-brand-100 dark:bg-brand-900/50 px-2 py-0.5 rounded-md">
+                  Selected
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {selectedId === 'custom' && onCustomChange && (
-        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] md:text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">Width (mm)</label>
+        <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Width (mm)</label>
             <input
-              type="number"
-              value={customWidth}
-              onChange={(e) => onCustomChange(Number(e.target.value), customHeight || 45)}
-              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-zinc-50/10 dark:text-zinc-50"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={customWidth ?? ''}
+              onChange={(e) => {
+                const parsed = parseDigitsInput(e.target.value, 1, 200);
+                if (parsed !== null) onCustomChange(parsed, customHeight || 45);
+              }}
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:text-zinc-50"
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] md:text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">Height (mm)</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Height (mm)</label>
             <input
-              type="number"
-              value={customHeight}
-              onChange={(e) => onCustomChange(customWidth || 35, Number(e.target.value))}
-              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-zinc-50/10 dark:text-zinc-50"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={customHeight ?? ''}
+              onChange={(e) => {
+                const parsed = parseDigitsInput(e.target.value, 1, 200);
+                if (parsed !== null) onCustomChange(customWidth || 35, parsed);
+              }}
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:text-zinc-50"
             />
           </div>
         </div>
       )}
+
+      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+        Currently: <span className="font-medium text-zinc-600 dark:text-zinc-300">{selectedSize.description}</span>
+      </p>
     </div>
   );
 };

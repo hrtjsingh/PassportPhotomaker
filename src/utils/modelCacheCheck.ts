@@ -2,7 +2,7 @@ import { ModelRegistry } from '@huggingface/transformers';
 import { getBgRemovalConfig, ensureBgRemovalPublicPath } from './bgRemovalConfig';
 import { HQ_BG_MODEL, PRELOAD_CACHE_VERSION } from '../config/mlModels';
 
-const STORAGE_KEY = 'passportmaker:models-cache';
+const STORAGE_KEY = 'snapid:models-cache';
 
 interface ModelsCacheRecord {
   version: string;

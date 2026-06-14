@@ -1,5 +1,7 @@
 import React from 'react';
 import { cn } from '../utils/cn';
+import { Copy } from 'lucide-react';
+import { parseDigitsInput } from '../utils/numericInput';
 
 interface CopiesSelectorProps {
   value: number;
@@ -10,30 +12,43 @@ const PRESETS = [4, 8, 12, 16, 24];
 
 export const CopiesSelector: React.FC<CopiesSelectorProps> = ({ value, onChange }) => {
   return (
-    <div className="flex flex-col gap-3">
-      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Number of Copies</label>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center">
+          <Copy className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+        </div>
+        <div>
+          <label className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Number of Copies</label>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Photos per A4 sheet</p>
+        </div>
+      </div>
       <div className="flex flex-wrap gap-2">
         {PRESETS.map((preset) => (
           <button
             key={preset}
             onClick={() => onChange(preset)}
             className={cn(
-              "px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm font-medium transition-all border",
+              'min-w-[3rem] px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border',
               value === preset
-                ? "bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-50 shadow-sm"
-                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/25'
+                : 'bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-brand-300 dark:hover:border-brand-700 hover:text-brand-600 dark:hover:text-brand-400'
             )}
           >
             {preset}
           </button>
         ))}
-        <div className="relative flex items-center">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">Custom</span>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={value}
-            onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
-            className="w-16 md:w-20 px-2 py-1.5 md:px-3 md:py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-zinc-50/10 dark:text-zinc-50"
-            placeholder="Custom"
+            onChange={(e) => {
+              const parsed = parseDigitsInput(e.target.value, 1, 48);
+              if (parsed !== null) onChange(parsed);
+            }}
+            className="w-14 bg-transparent text-sm font-semibold text-zinc-900 dark:text-zinc-50 focus:outline-none text-center"
           />
         </div>
       </div>

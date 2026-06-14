@@ -172,7 +172,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
           )}
         </div>
 
-        <div className="flex flex-col gap-6 bg-white dark:bg-zinc-900 p-6 md:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <div className="flex flex-col gap-6 card-elevated p-6 md:p-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Enhance Quality</h3>
@@ -240,7 +240,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setLighting(val);
                   scheduleEnhance(brightness, contrast, sharpen, val, skinClear);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-900 dark:accent-zinc-50 disabled:opacity-50"
+                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
 
@@ -264,7 +264,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setBrightness(val);
                   scheduleEnhance(val, contrast, sharpen, lighting, skinClear);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-900 dark:accent-zinc-50 disabled:opacity-50"
+                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
 
@@ -288,7 +288,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setContrast(val);
                   scheduleEnhance(brightness, val, sharpen, lighting, skinClear);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-900 dark:accent-zinc-50 disabled:opacity-50"
+                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
 
@@ -312,7 +312,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setSkinClear(val);
                   scheduleEnhance(brightness, contrast, sharpen, lighting, val);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-900 dark:accent-zinc-50 disabled:opacity-50"
+                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
 
@@ -336,7 +336,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                   setSharpen(val);
                   scheduleEnhance(brightness, contrast, val, lighting, skinClear);
                 }}
-                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-zinc-900 dark:accent-zinc-50 disabled:opacity-50"
+                className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-600 disabled:opacity-50"
               />
             </div>
           </div>
