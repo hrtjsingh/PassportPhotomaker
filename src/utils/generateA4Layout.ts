@@ -15,30 +15,31 @@ export interface A4LayoutResult {
   totalCopies: number;
 }
 
-const COLS = 5;
 const PAGE_PADDING_MM = 5;
-const PHOTO_MARGIN_MM = 5;
+const PHOTO_MARGIN_MM = 1;
 
 function drawPhotoOnPage(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   indexOnPage: number,
-  fittedPhotoWidth: number,
-  fittedPhotoHeight: number,
-  paddingPx: number,
+  photoWidthPx: number,
+  photoHeightPx: number,
+  cols: number,
+  offsetX: number,
+  offsetY: number,
   marginPx: number,
   scaleFactor: number
 ) {
-  const col = indexOnPage % COLS;
-  const row = Math.floor(indexOnPage / COLS);
-  const x = paddingPx + col * (fittedPhotoWidth + marginPx);
-  const y = paddingPx + row * (fittedPhotoHeight + marginPx);
+  const col = indexOnPage % cols;
+  const row = Math.floor(indexOnPage / cols);
+  const x = offsetX + col * (photoWidthPx + marginPx);
+  const y = offsetY + row * (photoHeightPx + marginPx);
 
-  ctx.drawImage(img, x, y, fittedPhotoWidth, fittedPhotoHeight);
+  ctx.drawImage(img, x, y, photoWidthPx, photoHeightPx);
 
   ctx.strokeStyle = '#cccccc';
   ctx.lineWidth = 2 * scaleFactor;
-  ctx.strokeRect(x, y, fittedPhotoWidth, fittedPhotoHeight);
+  ctx.strokeRect(x, y, photoWidthPx, photoHeightPx);
 
   ctx.save();
   ctx.strokeStyle = '#aaaaaa';
@@ -47,8 +48,8 @@ function drawPhotoOnPage(
   ctx.strokeRect(
     x - scaleFactor,
     y - scaleFactor,
-    fittedPhotoWidth + 2 * scaleFactor,
-    fittedPhotoHeight + 2 * scaleFactor
+    photoWidthPx + 2 * scaleFactor,
+    photoHeightPx + 2 * scaleFactor
   );
   ctx.restore();
 }
@@ -64,19 +65,21 @@ export async function generateA4Layout(
 
   const paddingPx = mmToPxAtDpi(PAGE_PADDING_MM, renderDPI);
   const marginPx = mmToPxAtDpi(PHOTO_MARGIN_MM, renderDPI);
+  const photoWidthPx = mmToPxAtDpi(photoWidthMm, renderDPI);
+  const photoHeightPx = mmToPxAtDpi(photoHeightMm, renderDPI);
 
   const usableWidth = canvasWidth - 2 * paddingPx;
-  const fittedPhotoWidth = Math.floor((usableWidth - (COLS - 1) * marginPx) / COLS);
-
-  const aspectRatio = photoHeightMm / photoWidthMm;
-  const fittedPhotoHeight = Math.round(fittedPhotoWidth * aspectRatio);
-
   const usableHeight = canvasHeight - 2 * paddingPx;
-  const maxRows = Math.max(
-    1,
-    Math.floor((usableHeight + marginPx) / (fittedPhotoHeight + marginPx))
-  );
-  const photosPerPage = COLS * maxRows;
+
+  const cols = Math.max(1, Math.floor((usableWidth + marginPx) / (photoWidthPx + marginPx)));
+  const rows = Math.max(1, Math.floor((usableHeight + marginPx) / (photoHeightPx + marginPx)));
+  const photosPerPage = cols * rows;
+
+  const gridWidth = cols * photoWidthPx + (cols - 1) * marginPx;
+  const gridHeight = rows * photoHeightPx + (rows - 1) * marginPx;
+  const offsetX = paddingPx + Math.floor((usableWidth - gridWidth) / 2);
+  const offsetY = paddingPx + Math.floor((usableHeight - gridHeight) / 2);
+
   const totalPages = Math.max(1, Math.ceil(numCopies / photosPerPage));
   const scaleFactor = renderDPI / 300;
 
@@ -107,9 +110,11 @@ export async function generateA4Layout(
         ctx,
         img,
         i - startCopy,
-        fittedPhotoWidth,
-        fittedPhotoHeight,
-        paddingPx,
+        photoWidthPx,
+        photoHeightPx,
+        cols,
+        offsetX,
+        offsetY,
         marginPx,
         scaleFactor
       );
