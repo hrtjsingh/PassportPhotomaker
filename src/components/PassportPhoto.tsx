@@ -75,6 +75,7 @@ export default function PassportPhoto() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [enhanceSkipped, setEnhanceSkipped] = useState(false);
+  const [bgRemovalSkipped, setBgRemovalSkipped] = useState(false);
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -83,7 +84,7 @@ export default function PassportPhoto() {
   const completedSteps = new Set<Step>();
   if (originalImage) completedSteps.add('upload');
   if (croppedImage) completedSteps.add('crop');
-  if (transparentImage) completedSteps.add('background');
+  if (transparentImage || bgRemovalSkipped) completedSteps.add('background');
   if (enhancedImage || enhanceSkipped) completedSteps.add('enhance');
   if (passportPhoto) completedSteps.add('settings');
   if (a4Layout) completedSteps.add('preview');
@@ -95,8 +96,11 @@ export default function PassportPhoto() {
       upload: true,
       crop: Boolean(originalImage),
       background: Boolean(croppedImage),
-      enhance: Boolean(transparentImage),
-      settings: Boolean(transparentImage),
+      enhance: Boolean(croppedImage) && Boolean(transparentImage || bgRemovalSkipped),
+      settings:
+        Boolean(croppedImage) &&
+        Boolean(transparentImage || bgRemovalSkipped) &&
+        Boolean(enhancedImage || enhanceSkipped),
       preview: Boolean(passportPhoto),
     };
     for (let i = 0; i <= targetIdx; i++) {
@@ -164,6 +168,7 @@ export default function PassportPhoto() {
       setTransparentImage(null);
       setEnhancedImage(null);
       setEnhanceSkipped(false);
+      setBgRemovalSkipped(false);
       setCurrentStep('background');
     } catch (e) {
       console.error(e);
@@ -177,6 +182,15 @@ export default function PassportPhoto() {
     setTransparentImage(transparent);
     setEnhancedImage(null);
     setEnhanceSkipped(false);
+    setBgRemovalSkipped(false);
+  };
+
+  const handleSkipBackground = () => {
+    setBgRemovalSkipped(true);
+    setTransparentImage(null);
+    setEnhancedImage(null);
+    setEnhanceSkipped(false);
+    setCurrentStep('enhance');
   };
 
   const handleEnhanceComplete = (enhanced: string) => {
@@ -187,6 +201,11 @@ export default function PassportPhoto() {
   const handleSkipEnhance = () => {
     setEnhanceSkipped(true);
     setEnhancedImage(null);
+    setCurrentStep('settings');
+  };
+
+  const handleContinueFromEnhance = () => {
+    if (!enhancedImage) setEnhanceSkipped(true);
     setCurrentStep('settings');
   };
 
@@ -266,6 +285,7 @@ export default function PassportPhoto() {
     setPassportPhoto(null);
     setUpscaleFactor(1);
     setEnhanceSkipped(false);
+    setBgRemovalSkipped(false);
     setCurrentStep('upload');
     setShowResetConfirm(false);
   };
@@ -456,7 +476,7 @@ export default function PassportPhoto() {
                   onBack={() => setCurrentStep('upload')}
                   backLabel="Back to Upload"
                   onContinue={handleCropNext}
-                  continueLabel="Remove Background"
+                  continueLabel="Continue"
                   continueLoading={isCropping}
                 />
               </div>
@@ -466,8 +486,8 @@ export default function PassportPhoto() {
               <div className="w-full flex flex-col items-center gap-8 md:gap-10">
                 <StepHeader
                   step={3}
-                  title="Remove background"
-                  description="AI removes the backdrop locally. Then pick your passport background color."
+                  title="Background"
+                  description="Optional — remove the backdrop with AI, pick a passport color, or skip to keep your original background."
                 />
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 w-full max-w-4xl items-start">
@@ -491,6 +511,8 @@ export default function PassportPhoto() {
                           >
                             {transparentImage ? (
                               <img src={transparentImage} alt="Preview" className="w-full h-full object-cover" />
+                            ) : croppedImage ? (
+                              <img src={croppedImage} alt="Preview" className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-400 dark:text-zinc-500 text-center p-2">
                                 Remove background to preview color
@@ -499,7 +521,11 @@ export default function PassportPhoto() {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-medium text-snapid-text">Live Preview</p>
-                            <p className="text-xs text-snapid-muted">The background color will be applied behind the subject.</p>
+                            <p className="text-xs text-snapid-muted">
+                              {transparentImage
+                                ? 'The background color will be applied behind the subject.'
+                                : 'Remove background to apply a new color, or skip to keep the original.'}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -512,12 +538,16 @@ export default function PassportPhoto() {
                   onContinue={() => setCurrentStep('enhance')}
                   continueLabel="Continue to Enhance"
                   continueDisabled={!transparentImage}
-                  continueHint="Remove the background first using the button above"
+                  continueHint="Remove the background first, or skip below"
+                  secondaryAction={{
+                    label: 'Skip background removal',
+                    onClick: handleSkipBackground,
+                  }}
                 />
               </div>
             )}
 
-            {currentStep === 'enhance' && transparentImage && (
+            {currentStep === 'enhance' && croppedImage && (transparentImage || bgRemovalSkipped) && (
               <div className="w-full flex flex-col items-center gap-8 md:gap-10">
                 <StepHeader
                   step={4}
@@ -526,14 +556,14 @@ export default function PassportPhoto() {
                 />
 
                 <ImageEnhancer 
-                  image={transparentImage} 
+                  image={transparentImage ?? croppedImage} 
                   selectedColor={bgColor}
                   onComplete={handleEnhanceComplete} 
                 />
 
                 <StepFooter
                   onBack={() => setCurrentStep('background')}
-                  onContinue={() => setCurrentStep('settings')}
+                  onContinue={handleContinueFromEnhance}
                   continueLabel="Continue to Print Settings"
                   secondaryAction={{
                     label: 'Skip enhancement',
@@ -543,7 +573,7 @@ export default function PassportPhoto() {
               </div>
             )}
 
-            {currentStep === 'settings' && transparentImage && (
+            {currentStep === 'settings' && croppedImage && (transparentImage || bgRemovalSkipped) && (enhancedImage || enhanceSkipped) && (
               <div className="w-full flex flex-col items-center gap-8 md:gap-10">
                 <StepHeader
                   step={5}
@@ -576,7 +606,7 @@ export default function PassportPhoto() {
                           height: `${(200 / (selectedSize.id === 'custom' ? customWidth : selectedSize.widthMm)) * (selectedSize.id === 'custom' ? customHeight : selectedSize.heightMm)}px` 
                         }}
                       >
-                        <img src={passportPhoto ?? transparentImage} alt="Passport Preview" className="w-full h-full object-cover" />
+                        <img src={passportPhoto ?? transparentImage ?? croppedImage} alt="Passport Preview" className="w-full h-full object-cover" />
                       </div>
                     </div>
                     <div className="mt-4 text-center">
