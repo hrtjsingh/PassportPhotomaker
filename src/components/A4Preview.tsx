@@ -64,7 +64,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
           </div>
         ) : pages.length > 0 ? (
           pages.map((page, index) => (
-            <div key={index} className="flex flex-col gap-2">
+            <div key={`${sheet.id}-${cols}-${rows}-${index}`} className="flex flex-col gap-2">
               {totalPages > 1 && (
                 <p className="text-xs font-semibold text-snapid-muted px-1">
                   Page {index + 1} of {totalPages}
@@ -76,6 +76,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
                   style={{ aspectRatio }}
                 >
                   <img
+                    key={page}
                     src={page}
                     alt={`${sheet.label} layout page ${index + 1}`}
                     className="w-full h-full object-contain"

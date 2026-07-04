@@ -26,7 +26,7 @@ import { generatePassportPhoto } from '../utils/generatePassportPhoto';
 import { generateA4Layout, computePrintGrid, type A4LayoutResult } from '../utils/generateA4Layout';
 import { exportPDF } from '../utils/exportPDF';
 import { clampGrid } from '../utils/computePrintGrid';
-import { getSheetById, DEFAULT_SHEET } from '../config/sheetSizes';
+import { getSheetById, A4_SHEET } from '../config/sheetSizes';
 import { PassportSize, PASSPORT_SIZES } from '../config/passportSizes';
 
 import { ImageEnhancer } from './ImageEnhancer';
@@ -73,11 +73,27 @@ export default function PassportPhoto() {
   const [customWidth, setCustomWidth] = useState(35);
   const [customHeight, setCustomHeight] = useState(45);
   const [bgColor, setBgColor] = useState('#ffffff');
-  const [numCopies, setNumCopies] = useState(8);
+  const [numCopies, setNumCopies] = useState(5);
   const [upscaleFactor, setUpscaleFactor] = useState(1);
-  const [sheetId, setSheetId] = useState(DEFAULT_SHEET.id);
-  const [gridCols, setGridCols] = useState(2);
-  const [gridRows, setGridRows] = useState(4);
+  const [sheetId, setSheetId] = useState(A4_SHEET.id);
+  const [gridCols, setGridCols] = useState(() => {
+    const limits = computePrintGrid(
+      PASSPORT_SIZES[0].widthMm,
+      PASSPORT_SIZES[0].heightMm,
+      A4_SHEET.widthMm,
+      A4_SHEET.heightMm
+    );
+    return limits.defaultCols;
+  });
+  const [gridRows, setGridRows] = useState(() => {
+    const limits = computePrintGrid(
+      PASSPORT_SIZES[0].widthMm,
+      PASSPORT_SIZES[0].heightMm,
+      A4_SHEET.widthMm,
+      A4_SHEET.heightMm
+    );
+    return limits.defaultRows;
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [enhanceSkipped, setEnhanceSkipped] = useState(false);
@@ -97,6 +113,22 @@ export default function PassportPhoto() {
     setGridCols(gridLimits.defaultCols);
     setGridRows(gridLimits.defaultRows);
   }, [gridLimits.defaultCols, gridLimits.defaultRows, sheetId, photoWidthMm, photoHeightMm]);
+
+  const handleSheetChange = useCallback(
+    (id: string) => {
+      const nextSheet = getSheetById(id);
+      const limits = computePrintGrid(
+        photoWidthMm,
+        photoHeightMm,
+        nextSheet.widthMm,
+        nextSheet.heightMm
+      );
+      setSheetId(id);
+      setGridCols(limits.defaultCols);
+      setGridRows(limits.defaultRows);
+    },
+    [photoWidthMm, photoHeightMm]
+  );
 
   usePageSEO(currentStep);
 
@@ -259,8 +291,12 @@ export default function PassportPhoto() {
     updatePassportPhoto();
   }, [enhancedImage, transparentImage, croppedImage, selectedSize, customWidth, customHeight, bgColor, upscaleFactor]);
 
-  // Generate A4 layout when passport photo or copies change
+  // Generate print layout when preview settings change
   useEffect(() => {
+    if (currentStep !== 'preview' || !passportPhoto) return;
+
+    let cancelled = false;
+
     const revokePages = (pages: string[]) => {
       pages.forEach((url) => {
         if (url.startsWith('blob:')) URL.revokeObjectURL(url);
@@ -268,18 +304,15 @@ export default function PassportPhoto() {
     };
 
     const updateA4Layout = async () => {
-      if (!passportPhoto) return;
       setIsGenerating(true);
 
-      const width = photoWidthMm;
-      const height = photoHeightMm;
       const { cols, rows } = clampGrid(gridCols, gridRows, gridLimits);
 
       try {
         const result = await generateA4Layout(
           passportPhoto,
-          width,
-          height,
+          photoWidthMm,
+          photoHeightMm,
           numCopies,
           300 * upscaleFactor,
           {
@@ -289,6 +322,10 @@ export default function PassportPhoto() {
             rows,
           }
         );
+        if (cancelled) {
+          revokePages(result.pages);
+          return;
+        }
         setA4Layout((prev) => {
           if (prev) revokePages(prev.pages);
           return result;
@@ -296,14 +333,29 @@ export default function PassportPhoto() {
       } catch (e) {
         console.error(e);
       } finally {
-        setIsGenerating(false);
+        if (!cancelled) setIsGenerating(false);
       }
     };
 
-    if (currentStep === 'preview') {
-      updateA4Layout();
-    }
-  }, [passportPhoto, numCopies, currentStep, photoWidthMm, photoHeightMm, upscaleFactor, sheet, gridCols, gridRows, gridLimits]);
+    updateA4Layout();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    passportPhoto,
+    numCopies,
+    currentStep,
+    photoWidthMm,
+    photoHeightMm,
+    upscaleFactor,
+    sheetId,
+    sheet.widthMm,
+    sheet.heightMm,
+    gridCols,
+    gridRows,
+    gridLimits,
+  ]);
 
   const performReset = () => {
     setA4Layout((prev) => {
@@ -321,9 +373,15 @@ export default function PassportPhoto() {
     setEnhancedImage(null);
     setPassportPhoto(null);
     setUpscaleFactor(1);
-    setSheetId(DEFAULT_SHEET.id);
-    setGridCols(2);
-    setGridRows(4);
+    setSheetId(A4_SHEET.id);
+    const resetLimits = computePrintGrid(
+      PASSPORT_SIZES[0].widthMm,
+      PASSPORT_SIZES[0].heightMm,
+      A4_SHEET.widthMm,
+      A4_SHEET.heightMm
+    );
+    setGridCols(resetLimits.defaultCols);
+    setGridRows(resetLimits.defaultRows);
     setEnhanceSkipped(false);
     setBgRemovalSkipped(false);
     setCurrentStep('upload');
@@ -684,7 +742,7 @@ export default function PassportPhoto() {
                 <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                   <PrintLayoutControls
                     sheetId={sheetId}
-                    onSheetChange={setSheetId}
+                    onSheetChange={handleSheetChange}
                     cols={gridCols}
                     rows={gridRows}
                     onColsChange={(value) => setGridCols(Math.min(value, gridLimits.maxCols))}
@@ -695,6 +753,7 @@ export default function PassportPhoto() {
                   />
 
                   <A4Preview
+                    key={`${sheetId}-${gridCols}-${gridRows}-${numCopies}`}
                     pages={a4Layout?.pages ?? []}
                     totalPages={a4Layout?.totalPages ?? 0}
                     photosPerPage={a4Layout?.photosPerPage ?? 0}

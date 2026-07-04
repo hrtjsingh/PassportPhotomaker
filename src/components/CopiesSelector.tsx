@@ -8,7 +8,7 @@ interface CopiesSelectorProps {
   onChange: (val: number) => void;
 }
 
-const PRESETS = [4, 8, 12, 16, 24, 30];
+const PRESETS = [5, 10, 15, 20];
 
 export const CopiesSelector: React.FC<CopiesSelectorProps> = ({ value, onChange }) => {
   return (
