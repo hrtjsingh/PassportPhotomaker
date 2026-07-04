@@ -3,33 +3,70 @@ export interface PrintDpiConfig {
   canvasHeight: number;
   renderDPI: number;
   metaDPI: number;
+  exportWidth: number;
+  exportHeight: number;
 }
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
 
-function configForDpi(dpi: number): PrintDpiConfig {
+export function mmToPxAtDpi(mm: number, dpi: number): number {
+  return Math.round((mm / 25.4) * dpi);
+}
+
+/** Whether browser can allocate and draw on a canvas of this size. */
+export function canCreateCanvas(width: number, height: number): boolean {
+  if (typeof document === 'undefined') return false;
+  if (width <= 0 || height <= 0) return false;
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    if (canvas.width !== width || canvas.height !== height) return false;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return false;
+    ctx.fillRect(0, 0, 1, 1);
+    return ctx.getImageData(0, 0, 1, 1).data[3] > 0;
+  } catch {
+    return false;
+  }
+}
+
+function configForDpi(targetDpi: number): PrintDpiConfig {
+  const exportWidth = mmToPxAtDpi(A4_WIDTH_MM, targetDpi);
+  const exportHeight = mmToPxAtDpi(A4_HEIGHT_MM, targetDpi);
+
+  let renderDpi = targetDpi;
+  while (renderDpi >= 300) {
+    const w = mmToPxAtDpi(A4_WIDTH_MM, renderDpi);
+    const h = mmToPxAtDpi(A4_HEIGHT_MM, renderDpi);
+    if (canCreateCanvas(w, h)) break;
+    renderDpi -= 50;
+  }
+
+  if (renderDpi < 300) {
+    renderDpi = 300;
+  }
+
+  const canvasWidth = mmToPxAtDpi(A4_WIDTH_MM, renderDpi);
+  const canvasHeight = mmToPxAtDpi(A4_HEIGHT_MM, renderDpi);
+  const canExportAtTarget =
+    renderDpi === targetDpi && canCreateCanvas(exportWidth, exportHeight);
+
   return {
-    canvasWidth: mmToPxAtDpi(A4_WIDTH_MM, dpi),
-    canvasHeight: mmToPxAtDpi(A4_HEIGHT_MM, dpi),
-    renderDPI: dpi,
-    metaDPI: dpi,
+    canvasWidth,
+    canvasHeight,
+    renderDPI: renderDpi,
+    metaDPI: canExportAtTarget ? targetDpi : renderDpi,
+    exportWidth: canExportAtTarget ? exportWidth : canvasWidth,
+    exportHeight: canExportAtTarget ? exportHeight : canvasHeight,
   };
 }
 
-/** True render + metadata DPI for each A4 export tier. */
-export const PRINT_DPI_CONFIG: Record<number, PrintDpiConfig> = {
-  300: configForDpi(300),
-  600: configForDpi(600),
-  1200: configForDpi(1200),
-};
-
+/** Render + metadata DPI for each A4 export tier (recomputed per call for live canvas limits). */
 export function getPrintDpiConfig(dpi: number): PrintDpiConfig {
-  return PRINT_DPI_CONFIG[dpi] ?? PRINT_DPI_CONFIG[300];
-}
-
-export function mmToPxAtDpi(mm: number, dpi: number): number {
-  return Math.round((mm / 25.4) * dpi);
+  return configForDpi(dpi);
 }
 
 function crc32(buf: Uint8Array): number {
@@ -57,6 +94,20 @@ function uint32BE(val: number): Uint8Array {
   return new Uint8Array([(val >>> 24) & 0xff, (val >>> 16) & 0xff, (val >>> 8) & 0xff, val & 0xff]);
 }
 
+function chunkEndAfterIhdr(png: Uint8Array): number {
+  let offset = 8;
+  while (offset + 8 <= png.length) {
+    const length =
+      (png[offset] << 24) | (png[offset + 1] << 16) | (png[offset + 2] << 8) | png[offset + 3];
+    const type = String.fromCharCode(png[offset + 4], png[offset + 5], png[offset + 6], png[offset + 7]);
+    if (type === 'IHDR') {
+      return offset + 12 + length;
+    }
+    offset += 12 + length;
+  }
+  return 33;
+}
+
 export function injectPngDpi(pngBuffer: ArrayBuffer, dpi: number): Uint8Array {
   const src = new Uint8Array(pngBuffer);
   const ppm = Math.round(dpi * (1000 / 25.4));
@@ -69,7 +120,7 @@ export function injectPngDpi(pngBuffer: ArrayBuffer, dpi: number): Uint8Array {
   const crc = uint32BE(crc32(chunkBody));
   const length = uint32BE(9);
   const phys = new Uint8Array([...length, ...chunkBody, ...crc]);
-  const insertAt = 8 + 25;
+  const insertAt = chunkEndAfterIhdr(src);
   const out = new Uint8Array(src.length + phys.length);
   out.set(src.slice(0, insertAt), 0);
   out.set(phys, insertAt);
@@ -82,6 +133,30 @@ async function canvasToPngBuffer(canvas: HTMLCanvasElement): Promise<ArrayBuffer
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/png');
   });
   return blob.arrayBuffer();
+}
+
+/** Upscale rendered page to export dimensions when browser supports the target canvas. */
+export function finalizeA4Canvas(canvas: HTMLCanvasElement, config: PrintDpiConfig): HTMLCanvasElement {
+  if (canvas.width === config.exportWidth && canvas.height === config.exportHeight) {
+    return canvas;
+  }
+
+  if (!canCreateCanvas(config.exportWidth, config.exportHeight)) {
+    return canvas;
+  }
+
+  const output = document.createElement('canvas');
+  output.width = config.exportWidth;
+  output.height = config.exportHeight;
+  const ctx = output.getContext('2d');
+  if (!ctx) {
+    return canvas;
+  }
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(canvas, 0, 0, config.exportWidth, config.exportHeight);
+  return output;
 }
 
 /** Blob URL — used for A4 sheet pages. */
@@ -107,6 +182,13 @@ export function createA4Canvas(config: PrintDpiConfig): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
+
+  if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
+    throw new Error(
+      `Could not create ${config.renderDPI} DPI canvas (${canvasWidth}×${canvasHeight}px). Try a lower resolution.`
+    );
+  }
+
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     throw new Error(

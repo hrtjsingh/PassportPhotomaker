@@ -1,6 +1,7 @@
 import {
   canvasToPngBlobUrl,
   createA4Canvas,
+  finalizeA4Canvas,
   getPrintDpiConfig,
   mmToPxAtDpi,
   type PrintDpiConfig,
@@ -61,7 +62,8 @@ export async function generateA4Layout(
   numCopies: number,
   dpi: PrintDPI = 300
 ): Promise<A4LayoutResult> {
-  const { canvasWidth, canvasHeight, renderDPI, metaDPI }: PrintDpiConfig = getPrintDpiConfig(dpi);
+  const dpiConfig: PrintDpiConfig = getPrintDpiConfig(dpi);
+  const { canvasWidth, canvasHeight, renderDPI, metaDPI } = dpiConfig;
 
   const paddingPx = mmToPxAtDpi(PAGE_PADDING_MM, renderDPI);
   const marginPx = mmToPxAtDpi(PHOTO_MARGIN_MM, renderDPI);
@@ -93,7 +95,7 @@ export async function generateA4Layout(
   const pages: string[] = [];
 
   for (let page = 0; page < totalPages; page++) {
-    const canvas = createA4Canvas({ canvasWidth, canvasHeight, renderDPI, metaDPI });
+    const canvas = createA4Canvas(dpiConfig);
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not get canvas context');
 
@@ -120,7 +122,7 @@ export async function generateA4Layout(
       );
     }
 
-    pages.push(await canvasToPngBlobUrl(canvas, metaDPI));
+    pages.push(await canvasToPngBlobUrl(finalizeA4Canvas(canvas, dpiConfig), metaDPI));
   }
 
   return {
