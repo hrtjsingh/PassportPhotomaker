@@ -5,6 +5,14 @@ export interface SheetSize {
   widthMm: number;
   heightMm: number;
   pdfFormat: [number, number];
+  /** Tighter padding for small photo paper (defaults to 5 mm). */
+  layoutPaddingMm?: number;
+  /** Gap between photos (defaults to 3 mm). */
+  layoutMarginMm?: number;
+  /** Prefer landscape when it fits more photos at true print size (e.g. 4×6 → 4×2). */
+  defaultLandscape?: boolean;
+  /** Landscape preview layout prints on native portrait paper (4×6 tray feed). */
+  printLandscapeAsPortrait?: boolean;
 }
 
 const IN = 25.4;
@@ -14,10 +22,14 @@ export const SHEET_SIZES: SheetSize[] = [
   {
     id: '4x6',
     label: '4×6"',
-    sublabel: '10×15 cm',
+    sublabel: '10×15 cm · up to 8 photos',
     widthMm: 4 * IN,
     heightMm: 6 * IN,
     pdfFormat: [4 * IN, 6 * IN],
+    layoutPaddingMm: 3,
+    layoutMarginMm: 2,
+    defaultLandscape: true,
+    printLandscapeAsPortrait: true,
   },
   {
     id: '5x7',
@@ -59,4 +71,20 @@ export const A4_SHEET = SHEET_SIZES.find((s) => s.id === 'a4') ?? SHEET_SIZES[SH
 
 export function getSheetById(id: string): SheetSize {
   return SHEET_SIZES.find((s) => s.id === id) ?? DEFAULT_SHEET;
+}
+
+export interface OrientedSheet {
+  widthMm: number;
+  heightMm: number;
+  pdfFormat: [number, number];
+  landscape: boolean;
+}
+
+export function getOrientedSheet(sheet: SheetSize, landscape: boolean): OrientedSheet {
+  return {
+    widthMm: landscape ? sheet.heightMm : sheet.widthMm,
+    heightMm: landscape ? sheet.widthMm : sheet.heightMm,
+    pdfFormat: landscape ? [sheet.heightMm, sheet.widthMm] : sheet.pdfFormat,
+    landscape,
+  };
 }

@@ -8,11 +8,13 @@ import {
 } from './printDpi';
 import {
   computePrintGrid,
+  getLayoutOptionsForSheet,
   getPhotoDrawSizePx,
   PAGE_PADDING_MM,
   PHOTO_MARGIN_MM,
+  type LayoutGridOptions,
 } from './computePrintGrid';
-import { DEFAULT_SHEET } from '../config/sheetSizes';
+import { DEFAULT_SHEET, type SheetSize } from '../config/sheetSizes';
 
 export type PrintDPI = number;
 
@@ -32,6 +34,8 @@ export interface PrintLayoutOptions {
   sheetHeightMm?: number;
   cols?: number;
   rows?: number;
+  sheet?: SheetSize;
+  layout?: LayoutGridOptions;
 }
 
 function drawPhotoOnPage(
@@ -55,7 +59,18 @@ function drawPhotoOnPage(
     img.naturalWidth === photoWidthPx && img.naturalHeight === photoHeightPx;
   ctx.imageSmoothingEnabled = !pixelPerfect;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x, y, photoWidthPx, photoHeightPx);
+
+  ctx.drawImage(
+    img,
+    0,
+    0,
+    img.naturalWidth,
+    img.naturalHeight,
+    x,
+    y,
+    photoWidthPx,
+    photoHeightPx
+  );
 
   ctx.strokeStyle = '#cccccc';
   ctx.lineWidth = 2 * scaleFactor;
@@ -84,19 +99,31 @@ export async function generateA4Layout(
 ): Promise<A4LayoutResult> {
   const sheetWidthMm = options.sheetWidthMm ?? DEFAULT_SHEET.widthMm;
   const sheetHeightMm = options.sheetHeightMm ?? DEFAULT_SHEET.heightMm;
+  const layoutOptions =
+    options.layout ??
+    (options.sheet ? getLayoutOptionsForSheet(options.sheet) : undefined) ??
+    {};
+  const paddingMm = layoutOptions.paddingMm ?? PAGE_PADDING_MM;
+  const marginMm = layoutOptions.marginMm ?? PHOTO_MARGIN_MM;
 
   const dpiConfig: PrintDpiConfig = getPrintDpiConfig(dpi, sheetWidthMm, sheetHeightMm);
   const { canvasWidth, canvasHeight, renderDPI, metaDPI } = dpiConfig;
 
-  const paddingPx = mmToPxAtDpi(PAGE_PADDING_MM, renderDPI);
-  const marginPx = mmToPxAtDpi(PHOTO_MARGIN_MM, renderDPI);
+  const paddingPx = mmToPxAtDpi(paddingMm, renderDPI);
+  const marginPx = mmToPxAtDpi(marginMm, renderDPI);
   const { widthPx: photoWidthPx, heightPx: photoHeightPx } = getPhotoDrawSizePx(
     photoWidthMm,
     photoHeightMm,
     renderDPI
   );
 
-  const gridLimits = computePrintGrid(photoWidthMm, photoHeightMm, sheetWidthMm, sheetHeightMm);
+  const gridLimits = computePrintGrid(
+    photoWidthMm,
+    photoHeightMm,
+    sheetWidthMm,
+    sheetHeightMm,
+    layoutOptions
+  );
   const cols = Math.min(options.cols ?? gridLimits.defaultCols, gridLimits.maxCols);
   const rows = Math.min(options.rows ?? gridLimits.defaultRows, gridLimits.maxRows);
   const photosPerPage = cols * rows;
@@ -157,4 +184,4 @@ export async function generateA4Layout(
   };
 }
 
-export { computePrintGrid };
+export { computePrintGrid, getLayoutOptionsForSheet };
