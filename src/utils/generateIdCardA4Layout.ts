@@ -7,12 +7,13 @@ import {
   mmToPxAtDpi,
   type PrintDpiConfig,
 } from './printDpi';
+import { A4_SHEET } from '../config/sheetSizes';
 
 type PrintDPI = number;
 
 const PAGE_PADDING_MM = 10;
-const CARD_GAP_MM = 12;
-const SET_GAP_MM = 12;
+const CARD_GAP_MM = 20;
+const SET_GAP_MM = 20;
 const MAX_SETS_PER_PAGE = 2;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -24,7 +25,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function drawCardContain(
+function drawCardFill(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   x: number,
@@ -34,13 +35,9 @@ function drawCardContain(
 ) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(x, y, w, h);
-
-  const scale = Math.min(w / img.width, h / img.height);
-  const dw = img.width * scale;
-  const dh = img.height * scale;
-  const dx = x + (w - dw) / 2;
-  const dy = y + (h - dh) / 2;
-  ctx.drawImage(img, dx, dy, dw, dh);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x, y, w, h);
 }
 
 function drawSet(
@@ -54,9 +51,9 @@ function drawSet(
   cardGapPx: number
 ) {
   let y = originY;
-  drawCardContain(ctx, frontImg, originX, y, cardWidthPx, cardHeightPx);
+  drawCardFill(ctx, frontImg, originX, y, cardWidthPx, cardHeightPx);
   y += cardHeightPx + cardGapPx;
-  drawCardContain(ctx, backImg, originX, y, cardWidthPx, cardHeightPx);
+  drawCardFill(ctx, backImg, originX, y, cardWidthPx, cardHeightPx);
 }
 
 export async function generateIdCardA4Layout(
@@ -67,7 +64,11 @@ export async function generateIdCardA4Layout(
   numCopies: number,
   dpi: PrintDPI = 300
 ): Promise<A4LayoutResult> {
-  const dpiConfig: PrintDpiConfig = getPrintDpiConfig(dpi);
+  const dpiConfig: PrintDpiConfig = getPrintDpiConfig(
+    dpi,
+    A4_SHEET.widthMm,
+    A4_SHEET.heightMm
+  );
   const { canvasWidth, canvasHeight, renderDPI, metaDPI } = dpiConfig;
 
   const paddingPx = mmToPxAtDpi(PAGE_PADDING_MM, renderDPI);
@@ -132,5 +133,9 @@ export async function generateIdCardA4Layout(
     photosPerPage: setsPerPage,
     totalPages,
     totalCopies: numCopies,
+    cols: 1,
+    rows: setsPerPage,
+    photoWidthMm: cardWidthMm,
+    photoHeightMm: cardHeightMm,
   };
 }

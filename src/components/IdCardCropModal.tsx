@@ -14,6 +14,7 @@ interface IdCardCropModalProps {
   targetHeightMm: number;
   onApply: (croppedUrl: string) => void;
   onCancel: () => void;
+  onReady?: () => void;
 }
 
 export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
@@ -25,12 +26,17 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
   targetHeightMm,
   onApply,
   onCancel,
+  onReady,
 }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [pixelCrop, setPixelCrop] = useState<Area | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
 
   useEffect(() => {
     if (open) {

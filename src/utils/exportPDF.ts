@@ -1,4 +1,6 @@
 import { jsPDF } from 'jspdf';
+import type { SheetSize } from '../config/sheetSizes';
+import { DEFAULT_SHEET } from '../config/sheetSizes';
 
 async function resolveImageForPdf(
   imageRef: string
@@ -24,20 +26,21 @@ async function resolveImageForPdf(
 
 export async function exportPDF(
   imagePages: string[],
-  fileName: string = 'passport-photos.pdf'
+  fileName: string = 'passport-photos.pdf',
+  sheet: SheetSize = DEFAULT_SHEET
 ) {
   if (imagePages.length === 0) return;
 
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4',
+    format: sheet.pdfFormat,
   });
 
   for (let index = 0; index < imagePages.length; index++) {
-    if (index > 0) pdf.addPage();
+    if (index > 0) pdf.addPage(sheet.pdfFormat);
     const { data, format } = await resolveImageForPdf(imagePages[index]);
-    pdf.addImage(data, format, 0, 0, 210, 297);
+    pdf.addImage(data, format, 0, 0, sheet.widthMm, sheet.heightMm);
   }
 
   pdf.save(fileName);

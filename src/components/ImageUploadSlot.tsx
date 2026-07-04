@@ -15,6 +15,8 @@ interface ImageUploadSlotProps {
   onImageSelected?: (url: string) => void;
   onEdit?: () => void;
   onClear?: () => void;
+  disabled?: boolean;
+  disabledHint?: string;
   className?: string;
 }
 
@@ -27,6 +29,8 @@ export const ImageUploadSlot: React.FC<ImageUploadSlotProps> = ({
   onImageSelected,
   onEdit,
   onClear,
+  disabled = false,
+  disabledHint = 'Preparing crop editor…',
   className,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -35,6 +39,7 @@ export const ImageUploadSlot: React.FC<ImageUploadSlotProps> = ({
 
   const processFile = useCallback(
     async (file: File) => {
+      if (disabled) return;
       if (!file.type.startsWith('image/')) {
         alert('Please upload an image file.');
         return;
@@ -68,27 +73,31 @@ export const ImageUploadSlot: React.FC<ImageUploadSlotProps> = ({
         setIsProcessing(false);
       }
     },
-    [onUpload, onImageSelected]
+    [disabled, onUpload, onImageSelected]
   );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
+      if (disabled) return;
       const file = e.dataTransfer.files[0];
       if (file) processFile(file);
     },
-    [processFile]
+    [disabled, processFile]
   );
 
   const onFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (disabled) return;
       const file = e.target.files?.[0];
       if (file) processFile(file);
       e.target.value = '';
     },
-    [processFile]
+    [disabled, processFile]
   );
+
+  const isInteractive = !disabled && !isProcessing;
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
@@ -133,12 +142,16 @@ export const ImageUploadSlot: React.FC<ImageUploadSlotProps> = ({
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
-        onClick={() => !isProcessing && document.getElementById(inputId)?.click()}
+        onClick={() => isInteractive && document.getElementById(inputId)?.click()}
         className={cn(
-          'relative rounded-2xl cursor-pointer flex flex-col items-center justify-center gap-3 transition-all duration-300 border backdrop-blur-sm min-h-[180px] p-6',
-          isDragging
-            ? 'border-2 border-brand-400 bg-white/5 scale-[1.01]'
-            : 'border-white/10 bg-white/5 hover:bg-white/8 hover:border-brand-500/30',
+          'relative rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-300 border backdrop-blur-sm min-h-[180px] p-6',
+          disabled
+            ? 'cursor-not-allowed opacity-50 border-white/10 bg-white/5'
+            : 'cursor-pointer',
+          !disabled &&
+            (isDragging
+              ? 'border-2 border-brand-400 bg-white/5 scale-[1.01]'
+              : 'border-white/10 bg-white/5 hover:bg-white/8 hover:border-brand-500/30'),
           preview && 'min-h-0 p-3'
         )}
       >
@@ -148,10 +161,15 @@ export const ImageUploadSlot: React.FC<ImageUploadSlotProps> = ({
           accept="image/jpeg,image/png,image/jpg"
           className="hidden"
           onChange={onFileChange}
-          disabled={isProcessing}
+          disabled={isProcessing || disabled}
         />
 
-        {isProcessing ? (
+        {disabled ? (
+          <div className="flex flex-col items-center gap-2 text-center px-4">
+            <div className="w-10 h-10 rounded-full border-2 border-brand-400/30 border-t-brand-400 animate-spin" />
+            <p className="text-sm font-medium text-zinc-300">{disabledHint}</p>
+          </div>
+        ) : isProcessing ? (
           <div className="flex flex-col items-center gap-3">
             <div className="text-sm font-bold text-brand-300">{progress}%</div>
             <p className="text-xs text-zinc-400">Processing…</p>
