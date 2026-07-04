@@ -17,7 +17,7 @@ export interface A4LayoutResult {
 }
 
 const PAGE_PADDING_MM = 5;
-const PHOTO_MARGIN_MM = 1;
+const PHOTO_MARGIN_MM = 3;
 
 function drawPhotoOnPage(
   ctx: CanvasRenderingContext2D,
