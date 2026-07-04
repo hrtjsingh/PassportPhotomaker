@@ -5,7 +5,6 @@ import { PageBackground } from './PageBackground';
 import { BrandLogo } from './BrandLogo';
 import { ImageUploadSlot } from './ImageUploadSlot';
 import { IdCardCropModal } from './IdCardCropModal';
-import { IdCardCopiesSelector } from './IdCardCopiesSelector';
 import { UpscaleSelector } from './UpscaleSelector';
 import { A4Preview } from './A4Preview';
 import { DownloadButtons } from './DownloadButtons';
@@ -14,6 +13,7 @@ import { BRAND_NAME } from '../config/brand';
 import { generateIdCardA4Layout } from '../utils/generateIdCardA4Layout';
 import { exportPDF } from '../utils/exportPDF';
 import type { A4LayoutResult } from '../utils/generateA4Layout';
+import { A4_SHEET } from '../config/sheetSizes';
 
 type IdSide = 'front' | 'back';
 
@@ -29,11 +29,17 @@ const ID_CARD_ASPECT = ID_CARD_ID1.widthMm / ID_CARD_ID1.heightMm;
 export default function IdCardPrint() {
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [backImage, setBackImage] = useState<string | null>(null);
-  const [numCopies, setNumCopies] = useState(1);
   const [upscaleFactor, setUpscaleFactor] = useState(1);
   const [layout, setLayout] = useState<A4LayoutResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCropModalReady, setIsCropModalReady] = useState(false);
   const [cropSession, setCropSession] = useState<CropSession | null>(null);
+
+  const handleCropModalReady = useCallback(() => {
+    setIsCropModalReady(true);
+  }, []);
+
+  const uploadDisabled = !isCropModalReady || Boolean(cropSession);
 
   const revokeBlob = useCallback((url: string | null | undefined) => {
     if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
@@ -110,7 +116,7 @@ export default function IdCardPrint() {
           backImage,
           ID_CARD_ID1.widthMm,
           ID_CARD_ID1.heightMm,
-          numCopies,
+          1,
           300 * upscaleFactor
         );
         if (!cancelled) {
@@ -138,7 +144,7 @@ export default function IdCardPrint() {
     return () => {
       cancelled = true;
     };
-  }, [frontImage, backImage, numCopies, upscaleFactor, revokeLayout]);
+  }, [frontImage, backImage, upscaleFactor, revokeLayout]);
 
   const handlePrint = () => {
     if (!layout?.pages.length) return;
@@ -167,7 +173,7 @@ export default function IdCardPrint() {
             }
             .page:last-child { page-break-after: auto; }
             img { width: 100%; height: 100%; object-fit: contain; }
-            @page { size: A4; margin: 0; }
+            @page { size: ${A4_SHEET.widthMm}mm ${A4_SHEET.heightMm}mm; margin: 0; }
           </style>
         </head>
         <body onload="window.print();window.close()">
@@ -224,6 +230,7 @@ export default function IdCardPrint() {
                 onImageSelected={handleImageSelected('front')}
                 onEdit={frontImage ? handleEditImage('front') : undefined}
                 onClear={() => clearImage('front')}
+                disabled={uploadDisabled}
               />
               <ImageUploadSlot
                 label="Back side"
@@ -233,12 +240,12 @@ export default function IdCardPrint() {
                 onImageSelected={handleImageSelected('back')}
                 onEdit={backImage ? handleEditImage('back') : undefined}
                 onClear={() => clearImage('back')}
+                disabled={uploadDisabled}
               />
             </div>
 
             {ready && (
-              <div className="card-elevated p-5 sm:p-6 space-y-8">
-                <IdCardCopiesSelector value={numCopies} onChange={setNumCopies} />
+              <div className="card-elevated p-5 sm:p-6">
                 <UpscaleSelector value={upscaleFactor} onChange={setUpscaleFactor} />
               </div>
             )}
@@ -255,13 +262,18 @@ export default function IdCardPrint() {
               totalPages={layout?.totalPages ?? 0}
               photosPerPage={layout?.photosPerPage ?? 0}
               totalCopies={layout?.totalCopies ?? 0}
+              cols={layout?.cols ?? 1}
+              rows={layout?.rows ?? 1}
+              sheet={A4_SHEET}
               upscaleFactor={upscaleFactor}
               isLoading={isGenerating}
             />
 
             {ready && (
               <DownloadButtons
-                onDownloadPdf={() => layout?.pages.length && exportPDF(layout.pages, 'id-card-print.pdf')}
+                onDownloadPdf={() =>
+                  layout?.pages.length && exportPDF(layout.pages, 'id-card-print.pdf', A4_SHEET)
+                }
                 onDownloadPng={() => {
                   if (!layout?.pages.length) return;
                   layout.pages.forEach((page, index) => {
@@ -302,6 +314,7 @@ export default function IdCardPrint() {
         targetHeightMm={ID_CARD_ID1.heightMm}
         onApply={applyCrop}
         onCancel={closeCropModal}
+        onReady={handleCropModalReady}
       />
     </div>
   );

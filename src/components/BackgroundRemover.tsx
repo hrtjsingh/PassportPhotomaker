@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Loader2, Zap, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Loader2, Zap, CheckCircle2, RotateCcw } from 'lucide-react';
 import { removeBackground } from '../utils/removeBackground';
 import { aiRemoveBackground } from '../utils/aiRemoveBackground';
 import { Button } from './ui/Button';
@@ -9,6 +9,7 @@ interface BackgroundRemoverProps {
   selectedColor: string;
   resultImage: string | null;
   onComplete: (transparentImage: string) => void;
+  onUndo?: () => void;
 }
 
 export const BackgroundRemover: React.FC<BackgroundRemoverProps> = ({
@@ -16,6 +17,7 @@ export const BackgroundRemover: React.FC<BackgroundRemoverProps> = ({
   selectedColor,
   resultImage,
   onComplete,
+  onUndo,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
@@ -99,6 +101,19 @@ export const BackgroundRemover: React.FC<BackgroundRemoverProps> = ({
       </div>
 
       <div className="flex flex-col gap-2.5 w-full">
+        {resultImage && onUndo && (
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            disabled={busy}
+            onClick={onUndo}
+            icon={<RotateCcw className="w-4 h-4" />}
+          >
+            Undo background removal
+          </Button>
+        )}
+
         <Button
           variant="primary"
           size="lg"

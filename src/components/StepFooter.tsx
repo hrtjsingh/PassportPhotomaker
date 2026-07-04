@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { Button } from './ui/Button';
 
@@ -14,6 +14,11 @@ interface StepFooterProps {
     label: string;
     onClick: () => void;
   };
+  undoAction?: {
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+  };
   className?: string;
 }
 
@@ -26,6 +31,7 @@ export function StepFooter({
   continueLoading = false,
   continueHint,
   secondaryAction,
+  undoAction,
   className,
 }: StepFooterProps) {
   return (
@@ -72,6 +78,18 @@ export function StepFooter({
           </Button>
         )}
       </div>
+
+      {undoAction && (
+        <button
+          type="button"
+          onClick={undoAction.onClick}
+          disabled={undoAction.disabled}
+          className="inline-flex items-center justify-center gap-2 text-sm font-medium text-snapid-muted hover:text-brand-300 transition-colors mx-auto py-1.5 px-3 rounded-lg hover:bg-snapid-bg-elevated disabled:opacity-40 disabled:pointer-events-none"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          {undoAction.label}
+        </button>
+      )}
 
       {secondaryAction && (
         <button

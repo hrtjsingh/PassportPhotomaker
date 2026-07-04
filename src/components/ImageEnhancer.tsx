@@ -7,10 +7,18 @@ import { Button } from './ui/Button';
 interface ImageEnhancerProps {
   image: string;
   selectedColor: string;
+  resultImage?: string | null;
   onComplete: (enhancedImage: string) => void;
+  onUndo?: () => void;
 }
 
-export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedColor, onComplete }) => {
+export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({
+  image,
+  selectedColor,
+  resultImage = null,
+  onComplete,
+  onUndo,
+}) => {
   const [brightness, setBrightness] = useState(1);
   const [contrast, setContrast] = useState(1);
   const [sharpen, setSharpen] = useState(0.2);
@@ -25,14 +33,16 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    setPreviewImage(image);
-    setHasEdited(false);
-    setBrightness(1);
-    setContrast(1);
-    setSharpen(0.2);
-    setSkinClear(0.35);
-    setLighting(1);
-  }, [image]);
+    setPreviewImage(resultImage ?? image);
+    setHasEdited(Boolean(resultImage));
+    if (!resultImage) {
+      setBrightness(1);
+      setContrast(1);
+      setSharpen(0.2);
+      setSkinClear(0.35);
+      setLighting(1);
+    }
+  }, [image, resultImage]);
 
   useEffect(() => () => clearTimeout(debounceRef.current), []);
 
@@ -76,7 +86,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
     [handleEnhance]
   );
 
-  const resetPreview = () => {
+  const handleUndo = () => {
     clearTimeout(debounceRef.current);
     setPreviewImage(image);
     setHasEdited(false);
@@ -85,7 +95,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
     setSharpen(0.2);
     setSkinClear(0.35);
     setLighting(1);
-    onComplete(image);
+    onUndo?.();
   };
 
   const smartEnhance = async () => {
@@ -180,11 +190,11 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({ image, selectedCol
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={resetPreview}
+                  onClick={handleUndo}
                   disabled={busy}
                   icon={<RotateCcw className="w-3.5 h-3.5" />}
                 >
-                  Reset
+                  Undo
                 </Button>
               )}
             </div>

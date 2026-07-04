@@ -19,7 +19,7 @@ export const CopiesSelector: React.FC<CopiesSelectorProps> = ({ value, onChange 
         </div>
         <div>
           <label className="text-sm font-semibold text-snapid-text">Number of Copies</label>
-          <p className="text-xs text-snapid-muted">Photos per A4 sheet</p>
+          <p className="text-xs text-snapid-muted">Total photos to print</p>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">

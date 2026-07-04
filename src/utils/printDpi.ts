@@ -33,14 +33,18 @@ export function canCreateCanvas(width: number, height: number): boolean {
   }
 }
 
-function configForDpi(targetDpi: number): PrintDpiConfig {
-  const exportWidth = mmToPxAtDpi(A4_WIDTH_MM, targetDpi);
-  const exportHeight = mmToPxAtDpi(A4_HEIGHT_MM, targetDpi);
+function configForDpi(
+  targetDpi: number,
+  sheetWidthMm: number = A4_WIDTH_MM,
+  sheetHeightMm: number = A4_HEIGHT_MM
+): PrintDpiConfig {
+  const exportWidth = mmToPxAtDpi(sheetWidthMm, targetDpi);
+  const exportHeight = mmToPxAtDpi(sheetHeightMm, targetDpi);
 
   let renderDpi = targetDpi;
   while (renderDpi >= 300) {
-    const w = mmToPxAtDpi(A4_WIDTH_MM, renderDpi);
-    const h = mmToPxAtDpi(A4_HEIGHT_MM, renderDpi);
+    const w = mmToPxAtDpi(sheetWidthMm, renderDpi);
+    const h = mmToPxAtDpi(sheetHeightMm, renderDpi);
     if (canCreateCanvas(w, h)) break;
     renderDpi -= 50;
   }
@@ -49,8 +53,8 @@ function configForDpi(targetDpi: number): PrintDpiConfig {
     renderDpi = 300;
   }
 
-  const canvasWidth = mmToPxAtDpi(A4_WIDTH_MM, renderDpi);
-  const canvasHeight = mmToPxAtDpi(A4_HEIGHT_MM, renderDpi);
+  const canvasWidth = mmToPxAtDpi(sheetWidthMm, renderDpi);
+  const canvasHeight = mmToPxAtDpi(sheetHeightMm, renderDpi);
   const canExportAtTarget =
     renderDpi === targetDpi && canCreateCanvas(exportWidth, exportHeight);
 
@@ -64,9 +68,13 @@ function configForDpi(targetDpi: number): PrintDpiConfig {
   };
 }
 
-/** Render + metadata DPI for each A4 export tier (recomputed per call for live canvas limits). */
-export function getPrintDpiConfig(dpi: number): PrintDpiConfig {
-  return configForDpi(dpi);
+/** Render + metadata DPI for a sheet size (recomputed per call for live canvas limits). */
+export function getPrintDpiConfig(
+  dpi: number,
+  sheetWidthMm: number = A4_WIDTH_MM,
+  sheetHeightMm: number = A4_HEIGHT_MM
+): PrintDpiConfig {
+  return configForDpi(dpi, sheetWidthMm, sheetHeightMm);
 }
 
 function crc32(buf: Uint8Array): number {

@@ -1,11 +1,15 @@
 import React from 'react';
 import { Loader2, FileImage } from 'lucide-react';
+import type { SheetSize } from '../config/sheetSizes';
 
 interface A4PreviewProps {
   pages: string[];
   totalPages: number;
   photosPerPage: number;
   totalCopies: number;
+  cols: number;
+  rows: number;
+  sheet: SheetSize;
   upscaleFactor: number;
   isLoading: boolean;
 }
@@ -15,9 +19,14 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
   totalPages,
   photosPerPage,
   totalCopies,
+  cols,
+  rows,
+  sheet,
   upscaleFactor,
   isLoading,
 }) => {
+  const aspectRatio = `${sheet.widthMm}/${sheet.heightMm}`;
+
   return (
     <div className="flex flex-col gap-4 w-full max-w-2xl mx-auto">
       <div className="flex items-center justify-between gap-4">
@@ -26,8 +35,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
             <FileImage className="w-4 h-4 text-brand-300" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-snapid-text">A4 Print Preview</h3>
-            <p className="text-xs text-snapid-muted">{300 * upscaleFactor} DPI output</p>
+            <h3 className="text-sm font-semibold text-snapid-text">{sheet.label} Photo Paper Preview</h3>
+            <p className="text-xs text-snapid-muted">{300 * upscaleFactor} DPI · {cols}×{rows} grid</p>
           </div>
         </div>
         {!isLoading && pages.length > 0 && (
@@ -36,7 +45,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
               {totalPages} page{totalPages > 1 ? 's' : ''} · {totalCopies} photo{totalCopies > 1 ? 's' : ''}
             </p>
             <p className="text-[11px] text-snapid-muted">
-              Up to {photosPerPage} per page
+              {photosPerPage} per page
             </p>
           </div>
         )}
@@ -45,7 +54,10 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
       <div className="flex flex-col gap-6">
         {isLoading ? (
           <div className="relative p-4 md:p-6 rounded-lg bg-snapid-bg-elevated/60 border border-[#e8dcc8]/10">
-            <div className="relative w-full aspect-210/297 bg-brand-50 rounded-lg flex flex-col items-center justify-center gap-4">
+            <div
+              className="relative w-full bg-brand-50 rounded-lg flex flex-col items-center justify-center gap-4"
+              style={{ aspectRatio }}
+            >
               <Loader2 className="w-10 h-10 text-brand-500 animate-spin" />
               <p className="text-sm font-medium text-snapid-muted">Generating layout…</p>
             </div>
@@ -59,10 +71,13 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
                 </p>
               )}
               <div className="relative p-4 md:p-6 rounded-lg bg-snapid-bg-elevated/60 border border-[#e8dcc8]/10">
-                <div className="relative w-full aspect-210/297 bg-brand-50 rounded-lg shadow-xl border border-[#e8dcc8]/15 overflow-hidden">
+                <div
+                  className="relative w-full bg-brand-50 rounded-lg shadow-xl border border-[#e8dcc8]/15 overflow-hidden"
+                  style={{ aspectRatio }}
+                >
                   <img
                     src={page}
-                    alt={`A4 layout page ${index + 1}`}
+                    alt={`${sheet.label} layout page ${index + 1}`}
                     className="w-full h-full object-contain"
                   />
                 </div>
@@ -71,7 +86,10 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
           ))
         ) : (
           <div className="relative p-4 md:p-6 rounded-lg bg-snapid-bg-elevated/60 border border-[#e8dcc8]/10">
-            <div className="relative w-full aspect-210/297 bg-snapid-bg-elevated rounded-lg flex flex-col items-center justify-center gap-2 text-snapid-muted">
+            <div
+              className="relative w-full bg-snapid-bg-elevated rounded-lg flex flex-col items-center justify-center gap-2 text-snapid-muted"
+              style={{ aspectRatio }}
+            >
               <FileImage className="w-8 h-8 opacity-50" />
               <p className="text-sm">Preview will appear here</p>
             </div>
