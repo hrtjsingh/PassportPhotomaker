@@ -100,6 +100,8 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
                 image={imageSrc}
                 crop={crop}
                 zoom={zoom}
+                minZoom={1}
+                maxZoom={8}
                 rotation={rotation}
                 aspect={aspectRatio}
                 onCropChange={setCrop}
@@ -145,7 +147,7 @@ export const IdCardCropModal: React.FC<IdCardCropModalProps> = ({
                 <input
                   type="range"
                   min={1}
-                  max={3}
+                  max={8}
                   step={0.05}
                   value={zoom}
                   onChange={(e) => setZoom(Number(e.target.value))}

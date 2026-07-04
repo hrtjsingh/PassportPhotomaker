@@ -32,6 +32,8 @@ export const CropEditor: React.FC<CropEditorProps> = ({
           image={image}
           crop={crop}
           zoom={zoom}
+          minZoom={1}
+          maxZoom={8}
           aspect={aspectRatio}
           onCropChange={setCrop}
           onZoomChange={setZoom}
@@ -72,7 +74,7 @@ export const CropEditor: React.FC<CropEditorProps> = ({
           type="range"
           value={zoom}
           min={1}
-          max={3}
+          max={8}
           step={0.1}
           aria-labelledby="Zoom"
           onChange={(e) => setZoom(Number(e.target.value))}
