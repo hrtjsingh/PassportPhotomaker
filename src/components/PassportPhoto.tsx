@@ -25,8 +25,9 @@ import getCroppedImg from '../utils/cropImage';
 import { generatePassportPhoto } from '../utils/generatePassportPhoto';
 import { generateA4Layout, computePrintGrid, type A4LayoutResult } from '../utils/generateA4Layout';
 import { exportPDF } from '../utils/exportPDF';
-import { clampGrid } from '../utils/computePrintGrid';
-import { getSheetById, A4_SHEET } from '../config/sheetSizes';
+import { getPrintPageDimensions, preparePagesForPrint } from '../utils/preparePrintPage';
+import { clampGrid, getLayoutOptionsForSheet } from '../utils/computePrintGrid';
+import { getSheetById, getOrientedSheet, A4_SHEET } from '../config/sheetSizes';
 import { PassportSize, PASSPORT_SIZES } from '../config/passportSizes';
 
 import { ImageEnhancer } from './ImageEnhancer';
@@ -76,6 +77,7 @@ export default function PassportPhoto() {
   const [numCopies, setNumCopies] = useState(5);
   const [upscaleFactor, setUpscaleFactor] = useState(1);
   const [sheetId, setSheetId] = useState(A4_SHEET.id);
+  const [sheetLandscape, setSheetLandscape] = useState(false);
   const [gridCols, setGridCols] = useState(() => {
     const limits = computePrintGrid(
       PASSPORT_SIZES[0].widthMm,
@@ -104,30 +106,64 @@ export default function PassportPhoto() {
   const photoWidthMm = selectedSize.id === 'custom' ? customWidth : selectedSize.widthMm;
   const photoHeightMm = selectedSize.id === 'custom' ? customHeight : selectedSize.heightMm;
   const sheet = useMemo(() => getSheetById(sheetId), [sheetId]);
+  const layoutOptions = useMemo(() => getLayoutOptionsForSheet(sheet), [sheet]);
+  const orientedSheet = useMemo(
+    () => getOrientedSheet(sheet, sheetLandscape),
+    [sheet, sheetLandscape]
+  );
   const gridLimits = useMemo(
-    () => computePrintGrid(photoWidthMm, photoHeightMm, sheet.widthMm, sheet.heightMm),
-    [photoWidthMm, photoHeightMm, sheet.widthMm, sheet.heightMm]
+    () =>
+      computePrintGrid(
+        photoWidthMm,
+        photoHeightMm,
+        orientedSheet.widthMm,
+        orientedSheet.heightMm,
+        layoutOptions
+      ),
+    [photoWidthMm, photoHeightMm, orientedSheet.widthMm, orientedSheet.heightMm, layoutOptions]
   );
 
   useEffect(() => {
     setGridCols(gridLimits.defaultCols);
     setGridRows(gridLimits.defaultRows);
-  }, [gridLimits.defaultCols, gridLimits.defaultRows, sheetId, photoWidthMm, photoHeightMm]);
+  }, [gridLimits.defaultCols, gridLimits.defaultRows, sheetId, sheetLandscape, photoWidthMm, photoHeightMm]);
 
   const handleSheetChange = useCallback(
     (id: string) => {
       const nextSheet = getSheetById(id);
+      const landscape = nextSheet.defaultLandscape ?? false;
+      const dims = getOrientedSheet(nextSheet, landscape);
       const limits = computePrintGrid(
         photoWidthMm,
         photoHeightMm,
-        nextSheet.widthMm,
-        nextSheet.heightMm
+        dims.widthMm,
+        dims.heightMm,
+        getLayoutOptionsForSheet(nextSheet)
       );
       setSheetId(id);
+      setSheetLandscape(landscape);
       setGridCols(limits.defaultCols);
       setGridRows(limits.defaultRows);
     },
     [photoWidthMm, photoHeightMm]
+  );
+
+  const handleLandscapeChange = useCallback(
+    (landscape: boolean) => {
+      const sheet = getSheetById(sheetId);
+      const dims = getOrientedSheet(sheet, landscape);
+      const limits = computePrintGrid(
+        photoWidthMm,
+        photoHeightMm,
+        dims.widthMm,
+        dims.heightMm,
+        getLayoutOptionsForSheet(sheet)
+      );
+      setSheetLandscape(landscape);
+      setGridCols(limits.defaultCols);
+      setGridRows(limits.defaultRows);
+    },
+    [sheetId, photoWidthMm, photoHeightMm]
   );
 
   usePageSEO(currentStep);
@@ -316,10 +352,12 @@ export default function PassportPhoto() {
           numCopies,
           300 * upscaleFactor,
           {
-            sheetWidthMm: sheet.widthMm,
-            sheetHeightMm: sheet.heightMm,
+            sheetWidthMm: orientedSheet.widthMm,
+            sheetHeightMm: orientedSheet.heightMm,
             cols,
             rows,
+            sheet,
+            layout: layoutOptions,
           }
         );
         if (cancelled) {
@@ -350,8 +388,10 @@ export default function PassportPhoto() {
     photoHeightMm,
     upscaleFactor,
     sheetId,
-    sheet.widthMm,
-    sheet.heightMm,
+    sheetLandscape,
+    orientedSheet.widthMm,
+    orientedSheet.heightMm,
+    layoutOptions,
     gridCols,
     gridRows,
     gridLimits,
@@ -374,6 +414,7 @@ export default function PassportPhoto() {
     setPassportPhoto(null);
     setUpscaleFactor(1);
     setSheetId(A4_SHEET.id);
+    setSheetLandscape(false);
     const resetLimits = computePrintGrid(
       PASSPORT_SIZES[0].widthMm,
       PASSPORT_SIZES[0].heightMm,
@@ -388,12 +429,15 @@ export default function PassportPhoto() {
     setShowResetConfirm(false);
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!a4Layout?.pages.length) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const pagesHtml = a4Layout.pages
+    const printPage = getPrintPageDimensions(sheet, sheetLandscape);
+    const pages = await preparePagesForPrint(a4Layout.pages, printPage);
+
+    const pagesHtml = pages
       .map(
         (src) =>
           `<div class="page"><img src="${src}" alt="Passport photo sheet" /></div>`
@@ -405,20 +449,36 @@ export default function PassportPhoto() {
         <head>
           <title>Print — ${BRAND_NAME}</title>
           <style>
-            * { box-sizing: border-box; }
-            body { margin: 0; padding: 0; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              width: ${printPage.widthMm}mm;
+            }
             .page {
-              width: 100vw;
-              height: 100vh;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              page-break-after: always;
+              width: ${printPage.widthMm}mm;
+              height: ${printPage.heightMm}mm;
+              margin: 0;
+              padding: 0;
+              position: relative;
               overflow: hidden;
+              page-break-after: always;
             }
             .page:last-child { page-break-after: auto; }
-            img { width: 100%; height: 100%; object-fit: contain; }
-            @page { size: ${sheet.widthMm}mm ${sheet.heightMm}mm; margin: 0; }
+            img {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: ${printPage.widthMm}mm;
+              height: ${printPage.heightMm}mm;
+              display: block;
+              object-fit: fill;
+              object-position: left top;
+            }
+            @page {
+              size: ${printPage.widthMm}mm ${printPage.heightMm}mm;
+              margin: 0;
+            }
           </style>
         </head>
         <body onload="window.print();window.close()">
@@ -750,10 +810,12 @@ export default function PassportPhoto() {
                     gridLimits={gridLimits}
                     photoWidthMm={photoWidthMm}
                     photoHeightMm={photoHeightMm}
+                    landscape={sheetLandscape}
+                    onLandscapeChange={handleLandscapeChange}
                   />
 
                   <A4Preview
-                    key={`${sheetId}-${gridCols}-${gridRows}-${numCopies}`}
+                    key={`${sheetId}-${sheetLandscape}-${gridCols}-${gridRows}-${numCopies}`}
                     pages={a4Layout?.pages ?? []}
                     totalPages={a4Layout?.totalPages ?? 0}
                     photosPerPage={a4Layout?.photosPerPage ?? 0}
@@ -761,6 +823,7 @@ export default function PassportPhoto() {
                     cols={a4Layout?.cols ?? gridCols}
                     rows={a4Layout?.rows ?? gridRows}
                     sheet={sheet}
+                    landscape={sheetLandscape}
                     upscaleFactor={upscaleFactor}
                     isLoading={isGenerating}
                   />
@@ -781,7 +844,7 @@ export default function PassportPhoto() {
                   }}
                   onDownloadPdf={() => {
                     if (!a4Layout?.pages.length) return;
-                    exportPDF(a4Layout.pages, 'passport-photos.pdf', sheet);
+                    exportPDF(a4Layout.pages, 'passport-photos.pdf', sheet, sheetLandscape);
                   }}
                   onPrint={handlePrint}
                   disabled={isGenerating || !a4Layout?.pages.length}

@@ -10,6 +10,7 @@ interface A4PreviewProps {
   cols: number;
   rows: number;
   sheet: SheetSize;
+  landscape?: boolean;
   upscaleFactor: number;
   isLoading: boolean;
 }
@@ -22,10 +23,14 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
   cols,
   rows,
   sheet,
+  landscape = false,
   upscaleFactor,
   isLoading,
 }) => {
-  const aspectRatio = `${sheet.widthMm}/${sheet.heightMm}`;
+  const aspectRatio = landscape
+    ? `${sheet.heightMm}/${sheet.widthMm}`
+    : `${sheet.widthMm}/${sheet.heightMm}`;
+  const orientationLabel = landscape ? 'Landscape' : 'Portrait';
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-2xl mx-auto">
@@ -36,7 +41,9 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-snapid-text">{sheet.label} Photo Paper Preview</h3>
-            <p className="text-xs text-snapid-muted">{300 * upscaleFactor} DPI · {cols}×{rows} grid</p>
+            <p className="text-xs text-snapid-muted">
+              {300 * upscaleFactor} DPI · {orientationLabel} · {cols}×{rows} grid
+            </p>
           </div>
         </div>
         {!isLoading && pages.length > 0 && (
@@ -64,22 +71,19 @@ export const A4Preview: React.FC<A4PreviewProps> = ({
           </div>
         ) : pages.length > 0 ? (
           pages.map((page, index) => (
-            <div key={`${sheet.id}-${cols}-${rows}-${index}`} className="flex flex-col gap-2">
+            <div key={`${sheet.id}-${landscape ? 'L' : 'P'}-${cols}-${rows}-${index}`} className="flex flex-col gap-2">
               {totalPages > 1 && (
                 <p className="text-xs font-semibold text-snapid-muted px-1">
                   Page {index + 1} of {totalPages}
                 </p>
               )}
               <div className="relative p-4 md:p-6 rounded-lg bg-snapid-bg-elevated/60 border border-[#e8dcc8]/10">
-                <div
-                  className="relative w-full bg-brand-50 rounded-lg shadow-xl border border-[#e8dcc8]/15 overflow-hidden"
-                  style={{ aspectRatio }}
-                >
+                <div className="relative w-full bg-brand-50 rounded-lg shadow-xl border border-[#e8dcc8]/15 overflow-hidden">
                   <img
                     key={page}
                     src={page}
                     alt={`${sheet.label} layout page ${index + 1}`}
-                    className="w-full h-full object-contain"
+                    className="block w-full h-auto"
                   />
                 </div>
               </div>

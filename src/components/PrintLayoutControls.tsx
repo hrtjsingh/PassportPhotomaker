@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, FileText, Minus, Plus } from 'lucide-react';
+import { LayoutGrid, FileText, Minus, Plus, Smartphone, RotateCw } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { SHEET_SIZES, type SheetSize } from '../config/sheetSizes';
 import type { PrintGridLimits } from '../utils/computePrintGrid';
@@ -15,6 +15,8 @@ interface PrintLayoutControlsProps {
   gridLimits: PrintGridLimits;
   photoWidthMm: number;
   photoHeightMm: number;
+  landscape: boolean;
+  onLandscapeChange: (landscape: boolean) => void;
 }
 
 function GridStepper({
@@ -83,6 +85,8 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
   gridLimits,
   photoWidthMm,
   photoHeightMm,
+  landscape,
+  onLandscapeChange,
 }) => {
   const photosPerPage = cols * rows;
   const selectedSheet = SHEET_SIZES.find((s) => s.id === sheetId) ?? SHEET_SIZES[0];
@@ -123,6 +127,38 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-snapid-text">Orientation</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => onLandscapeChange(false)}
+            className={cn(
+              'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-all',
+              !landscape
+                ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/25'
+                : 'bg-snapid-bg-elevated/60 text-snapid-muted border-[#e8dcc8]/10 hover:border-brand-400/30 hover:text-brand-300'
+            )}
+          >
+            <Smartphone className="w-4 h-4" />
+            Portrait
+          </button>
+          <button
+            type="button"
+            onClick={() => onLandscapeChange(true)}
+            className={cn(
+              'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-all',
+              landscape
+                ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/25'
+                : 'bg-snapid-bg-elevated/60 text-snapid-muted border-[#e8dcc8]/10 hover:border-brand-400/30 hover:text-brand-300'
+            )}
+          >
+            <RotateCw className="w-4 h-4" />
+            Landscape
+          </button>
         </div>
       </div>
 
