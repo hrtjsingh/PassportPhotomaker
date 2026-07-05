@@ -130,37 +130,39 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-snapid-text">Orientation</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onLandscapeChange(false)}
-            className={cn(
-              'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-all',
-              !landscape
-                ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/25'
-                : 'bg-snapid-bg-elevated/60 text-snapid-muted border-[#e8dcc8]/10 hover:border-brand-400/30 hover:text-brand-300'
-            )}
-          >
-            <Smartphone className="w-4 h-4" />
-            Portrait
-          </button>
-          <button
-            type="button"
-            onClick={() => onLandscapeChange(true)}
-            className={cn(
-              'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-all',
-              landscape
-                ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/25'
-                : 'bg-snapid-bg-elevated/60 text-snapid-muted border-[#e8dcc8]/10 hover:border-brand-400/30 hover:text-brand-300'
-            )}
-          >
-            <RotateCw className="w-4 h-4" />
-            Landscape
-          </button>
+      {!selectedSheet.portraitOnly && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-snapid-text">Orientation</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => onLandscapeChange(false)}
+              className={cn(
+                'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-all',
+                !landscape
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/25'
+                  : 'bg-snapid-bg-elevated/60 text-snapid-muted border-[#e8dcc8]/10 hover:border-brand-400/30 hover:text-brand-300'
+              )}
+            >
+              <Smartphone className="w-4 h-4" />
+              Portrait
+            </button>
+            <button
+              type="button"
+              onClick={() => onLandscapeChange(true)}
+              className={cn(
+                'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-all',
+                landscape
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/25'
+                  : 'bg-snapid-bg-elevated/60 text-snapid-muted border-[#e8dcc8]/10 hover:border-brand-400/30 hover:text-brand-300'
+              )}
+            >
+              <RotateCw className="w-4 h-4" />
+              Landscape
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-3 pt-1 border-t border-[#e8dcc8]/10">
         <div className="flex items-center gap-2">
@@ -192,6 +194,16 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
         <p className="text-[11px] text-snapid-muted font-mono">
           Each photo locked at {photoWidthMm}×{photoHeightMm} mm — grid changes count only
         </p>
+        {selectedSheet.portraitOnly && selectedSheet.rotatePhotosOnSheet && (
+          <p className="text-[11px] text-snapid-muted">
+            Portrait 4×6 · each photo rotated 90° to fit 8 per sheet at true print size.
+          </p>
+        )}
+        {selectedSheet.portraitOnly && !selectedSheet.rotatePhotosOnSheet && (
+          <p className="text-[11px] text-snapid-muted">
+            Portrait only — layout stays inside sheet edges so nothing is clipped when printing.
+          </p>
+        )}
       </div>
     </div>
   );
