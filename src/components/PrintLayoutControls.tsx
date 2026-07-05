@@ -105,7 +105,7 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
 
       <div className="space-y-2">
         <p className="text-xs font-medium text-snapid-text">Photo paper size</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {SHEET_SIZES.map((sheet: SheetSize) => {
             const selected = sheet.id === sheetId;
             return (
@@ -196,7 +196,7 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
         </p>
         {selectedSheet.portraitOnly && selectedSheet.rotatePhotosOnSheet && (
           <p className="text-[11px] text-snapid-muted">
-            Portrait 4×6 · photos rotated 90° · grid centered · 8 per sheet at true print size.
+            Portrait 4×6 · photos rotated 90° · grid centered · 8 per page at true print size.
           </p>
         )}
         {selectedSheet.portraitOnly && !selectedSheet.rotatePhotosOnSheet && (
