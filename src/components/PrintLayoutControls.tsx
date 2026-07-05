@@ -196,7 +196,7 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
         </p>
         {selectedSheet.portraitOnly && selectedSheet.rotatePhotosOnSheet && (
           <p className="text-[11px] text-snapid-muted">
-            Portrait 4×6 · each photo rotated 90° to fit 8 per sheet at true print size.
+            Portrait 4×6 · photos rotated 90° · grid centered · 8 per sheet at true print size.
           </p>
         )}
         {selectedSheet.portraitOnly && !selectedSheet.rotatePhotosOnSheet && (

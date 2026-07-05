@@ -12,7 +12,7 @@ import {
   getCellSizePx,
   getLayoutOptionsForSheet,
   getPhotoDrawSizePx,
-  PAGE_PADDING_MM,
+  resolveSheetPadding,
   PHOTO_MARGIN_MM,
   type LayoutGridOptions,
 } from './computePrintGrid';
@@ -103,11 +103,12 @@ function drawPhotoOnPage(
   ctx.strokeStyle = '#aaaaaa';
   ctx.lineWidth = 1 * scaleFactor;
   ctx.setLineDash([6 * scaleFactor, 4 * scaleFactor]);
+  const inset = 2 * scaleFactor;
   ctx.strokeRect(
-    x - scaleFactor,
-    y - scaleFactor,
-    cellWidthPx + 2 * scaleFactor,
-    cellHeightPx + 2 * scaleFactor
+    x + inset,
+    y + inset,
+    Math.max(0, cellWidthPx - 2 * inset),
+    Math.max(0, cellHeightPx - 2 * inset)
   );
   ctx.restore();
 }
@@ -126,14 +127,13 @@ export async function generateA4Layout(
     options.layout ??
     (options.sheet ? getLayoutOptionsForSheet(options.sheet) : undefined) ??
     {};
-  const paddingMm = layoutOptions.paddingMm ?? PAGE_PADDING_MM;
+  const padding = resolveSheetPadding(layoutOptions);
   const marginMm = layoutOptions.marginMm ?? PHOTO_MARGIN_MM;
   const rotatePhotosOnSheet = layoutOptions.rotatePhotosOnSheet ?? false;
 
   const dpiConfig: PrintDpiConfig = getPrintDpiConfig(dpi, sheetWidthMm, sheetHeightMm);
   const { canvasWidth, canvasHeight, renderDPI, metaDPI } = dpiConfig;
 
-  const paddingPx = mmToPxAtDpi(paddingMm, renderDPI);
   const marginPx = mmToPxAtDpi(marginMm, renderDPI);
   const { widthPx: photoWidthPx, heightPx: photoHeightPx } = getPhotoDrawSizePx(
     photoWidthMm,
@@ -165,8 +165,15 @@ export async function generateA4Layout(
   );
   const photosPerPage = cols * rows;
 
-  const offsetX = paddingPx;
-  const offsetY = paddingPx;
+  const gridWidthPx = cols * cellWidthPx + Math.max(0, cols - 1) * marginPx;
+  const gridHeightPx = rows * cellHeightPx + Math.max(0, rows - 1) * marginPx;
+
+  const offsetX = layoutOptions.centerGridOnSheet
+    ? Math.round((canvasWidth - gridWidthPx) / 2)
+    : mmToPxAtDpi(padding.left, renderDPI);
+  const offsetY = layoutOptions.centerGridOnSheet
+    ? Math.round((canvasHeight - gridHeightPx) / 2)
+    : mmToPxAtDpi(padding.top, renderDPI);
 
   const totalPages = Math.max(1, Math.ceil(numCopies / photosPerPage));
   const scaleFactor = renderDPI / 300;
