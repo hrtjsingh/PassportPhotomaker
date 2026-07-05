@@ -1,10 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { SheetSize } from '../config/sheetSizes';
 import { DEFAULT_SHEET } from '../config/sheetSizes';
-import {
-  getPrintPageDimensions,
-  preparePageForPrint,
-} from './preparePrintPage';
+import { getPrintPageDimensions } from './preparePrintPage';
 
 async function resolveImageForPdf(
   imageRef: string
@@ -50,8 +47,7 @@ export async function exportPDF(
     if (index > 0) {
       pdf.addPage([sheet.widthMm, sheet.heightMm], jsPdfOrientation);
     }
-    const prepared = await preparePageForPrint(imagePages[index], printPage);
-    const { data, format } = await resolveImageForPdf(prepared);
+    const { data, format } = await resolveImageForPdf(imagePages[index]);
     pdf.addImage(data, format, 0, 0, printPage.widthMm, printPage.heightMm);
   }
 

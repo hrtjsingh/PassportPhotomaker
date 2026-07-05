@@ -8,6 +8,8 @@ import {
 } from './printDpi';
 import {
   computePrintGrid,
+  clampGridToFitSheet,
+  getCellSizePx,
   getLayoutOptionsForSheet,
   getPhotoDrawSizePx,
   PAGE_PADDING_MM,
@@ -44,37 +46,58 @@ function drawPhotoOnPage(
   indexOnPage: number,
   photoWidthPx: number,
   photoHeightPx: number,
+  cellWidthPx: number,
+  cellHeightPx: number,
   cols: number,
   offsetX: number,
   offsetY: number,
   marginPx: number,
-  scaleFactor: number
+  scaleFactor: number,
+  rotateOnSheet: boolean
 ) {
   const col = indexOnPage % cols;
   const row = Math.floor(indexOnPage / cols);
-  const x = offsetX + col * (photoWidthPx + marginPx);
-  const y = offsetY + row * (photoHeightPx + marginPx);
+  const x = offsetX + col * (cellWidthPx + marginPx);
+  const y = offsetY + row * (cellHeightPx + marginPx);
 
   const pixelPerfect =
     img.naturalWidth === photoWidthPx && img.naturalHeight === photoHeightPx;
   ctx.imageSmoothingEnabled = !pixelPerfect;
   ctx.imageSmoothingQuality = 'high';
 
-  ctx.drawImage(
-    img,
-    0,
-    0,
-    img.naturalWidth,
-    img.naturalHeight,
-    x,
-    y,
-    photoWidthPx,
-    photoHeightPx
-  );
+  if (rotateOnSheet) {
+    ctx.save();
+    ctx.translate(x + cellWidthPx, y);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(
+      img,
+      0,
+      0,
+      img.naturalWidth,
+      img.naturalHeight,
+      0,
+      0,
+      photoWidthPx,
+      photoHeightPx
+    );
+    ctx.restore();
+  } else {
+    ctx.drawImage(
+      img,
+      0,
+      0,
+      img.naturalWidth,
+      img.naturalHeight,
+      x,
+      y,
+      photoWidthPx,
+      photoHeightPx
+    );
+  }
 
   ctx.strokeStyle = '#cccccc';
   ctx.lineWidth = 2 * scaleFactor;
-  ctx.strokeRect(x, y, photoWidthPx, photoHeightPx);
+  ctx.strokeRect(x, y, cellWidthPx, cellHeightPx);
 
   ctx.save();
   ctx.strokeStyle = '#aaaaaa';
@@ -83,8 +106,8 @@ function drawPhotoOnPage(
   ctx.strokeRect(
     x - scaleFactor,
     y - scaleFactor,
-    photoWidthPx + 2 * scaleFactor,
-    photoHeightPx + 2 * scaleFactor
+    cellWidthPx + 2 * scaleFactor,
+    cellHeightPx + 2 * scaleFactor
   );
   ctx.restore();
 }
@@ -105,6 +128,7 @@ export async function generateA4Layout(
     {};
   const paddingMm = layoutOptions.paddingMm ?? PAGE_PADDING_MM;
   const marginMm = layoutOptions.marginMm ?? PHOTO_MARGIN_MM;
+  const rotatePhotosOnSheet = layoutOptions.rotatePhotosOnSheet ?? false;
 
   const dpiConfig: PrintDpiConfig = getPrintDpiConfig(dpi, sheetWidthMm, sheetHeightMm);
   const { canvasWidth, canvasHeight, renderDPI, metaDPI } = dpiConfig;
@@ -116,6 +140,12 @@ export async function generateA4Layout(
     photoHeightMm,
     renderDPI
   );
+  const { widthPx: cellWidthPx, heightPx: cellHeightPx } = getCellSizePx(
+    photoWidthMm,
+    photoHeightMm,
+    renderDPI,
+    rotatePhotosOnSheet
+  );
 
   const gridLimits = computePrintGrid(
     photoWidthMm,
@@ -124,8 +154,15 @@ export async function generateA4Layout(
     sheetHeightMm,
     layoutOptions
   );
-  const cols = Math.min(options.cols ?? gridLimits.defaultCols, gridLimits.maxCols);
-  const rows = Math.min(options.rows ?? gridLimits.defaultRows, gridLimits.maxRows);
+  const { cols, rows } = clampGridToFitSheet(
+    options.cols ?? gridLimits.defaultCols,
+    options.rows ?? gridLimits.defaultRows,
+    photoWidthMm,
+    photoHeightMm,
+    sheetWidthMm,
+    sheetHeightMm,
+    layoutOptions
+  );
   const photosPerPage = cols * rows;
 
   const offsetX = paddingPx;
@@ -161,11 +198,14 @@ export async function generateA4Layout(
         i - startCopy,
         photoWidthPx,
         photoHeightPx,
+        cellWidthPx,
+        cellHeightPx,
         cols,
         offsetX,
         offsetY,
         marginPx,
-        scaleFactor
+        scaleFactor,
+        rotatePhotosOnSheet
       );
     }
 

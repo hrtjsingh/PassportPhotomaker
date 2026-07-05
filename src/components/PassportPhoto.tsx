@@ -26,8 +26,8 @@ import { generatePassportPhoto } from '../utils/generatePassportPhoto';
 import { generateA4Layout, computePrintGrid, type A4LayoutResult } from '../utils/generateA4Layout';
 import { exportPDF } from '../utils/exportPDF';
 import { getPrintPageDimensions, preparePagesForPrint } from '../utils/preparePrintPage';
-import { clampGrid, getLayoutOptionsForSheet } from '../utils/computePrintGrid';
-import { getSheetById, getOrientedSheet, A4_SHEET } from '../config/sheetSizes';
+import { clampGridToFitSheet, getLayoutOptionsForSheet } from '../utils/computePrintGrid';
+import { getEffectiveLandscape, getSheetById, getOrientedSheet, A4_SHEET } from '../config/sheetSizes';
 import { PassportSize, PASSPORT_SIZES } from '../config/passportSizes';
 
 import { ImageEnhancer } from './ImageEnhancer';
@@ -107,9 +107,13 @@ export default function PassportPhoto() {
   const photoHeightMm = selectedSize.id === 'custom' ? customHeight : selectedSize.heightMm;
   const sheet = useMemo(() => getSheetById(sheetId), [sheetId]);
   const layoutOptions = useMemo(() => getLayoutOptionsForSheet(sheet), [sheet]);
-  const orientedSheet = useMemo(
-    () => getOrientedSheet(sheet, sheetLandscape),
+  const layoutLandscape = useMemo(
+    () => getEffectiveLandscape(sheet, sheetLandscape),
     [sheet, sheetLandscape]
+  );
+  const orientedSheet = useMemo(
+    () => getOrientedSheet(sheet, layoutLandscape),
+    [sheet, layoutLandscape]
   );
   const gridLimits = useMemo(
     () =>
@@ -126,12 +130,12 @@ export default function PassportPhoto() {
   useEffect(() => {
     setGridCols(gridLimits.defaultCols);
     setGridRows(gridLimits.defaultRows);
-  }, [gridLimits.defaultCols, gridLimits.defaultRows, sheetId, sheetLandscape, photoWidthMm, photoHeightMm]);
+  }, [gridLimits.defaultCols, gridLimits.defaultRows, sheetId, layoutLandscape, photoWidthMm, photoHeightMm]);
 
   const handleSheetChange = useCallback(
     (id: string) => {
       const nextSheet = getSheetById(id);
-      const landscape = nextSheet.defaultLandscape ?? false;
+      const landscape = nextSheet.portraitOnly ? false : (nextSheet.defaultLandscape ?? false);
       const dims = getOrientedSheet(nextSheet, landscape);
       const limits = computePrintGrid(
         photoWidthMm,
@@ -342,7 +346,15 @@ export default function PassportPhoto() {
     const updateA4Layout = async () => {
       setIsGenerating(true);
 
-      const { cols, rows } = clampGrid(gridCols, gridRows, gridLimits);
+      const { cols, rows } = clampGridToFitSheet(
+        gridCols,
+        gridRows,
+        photoWidthMm,
+        photoHeightMm,
+        orientedSheet.widthMm,
+        orientedSheet.heightMm,
+        layoutOptions
+      );
 
       try {
         const result = await generateA4Layout(
@@ -389,6 +401,7 @@ export default function PassportPhoto() {
     upscaleFactor,
     sheetId,
     sheetLandscape,
+    layoutLandscape,
     orientedSheet.widthMm,
     orientedSheet.heightMm,
     layoutOptions,
@@ -435,7 +448,9 @@ export default function PassportPhoto() {
     if (!printWindow) return;
 
     const printPage = getPrintPageDimensions(sheet, sheetLandscape);
-    const pages = await preparePagesForPrint(a4Layout.pages, printPage);
+    const pageOrientation =
+      printPage.heightMm >= printPage.widthMm ? 'portrait' : 'landscape';
+    const pages = await preparePagesForPrint(a4Layout.pages);
 
     const pagesHtml = pages
       .map(
@@ -476,7 +491,7 @@ export default function PassportPhoto() {
               object-position: left top;
             }
             @page {
-              size: ${printPage.widthMm}mm ${printPage.heightMm}mm;
+              size: ${printPage.widthMm}mm ${printPage.heightMm}mm ${pageOrientation};
               margin: 0;
             }
           </style>
@@ -815,7 +830,7 @@ export default function PassportPhoto() {
                   />
 
                   <A4Preview
-                    key={`${sheetId}-${sheetLandscape}-${gridCols}-${gridRows}-${numCopies}`}
+                    key={`${sheetId}-${layoutLandscape}-${gridCols}-${gridRows}-${numCopies}`}
                     pages={a4Layout?.pages ?? []}
                     totalPages={a4Layout?.totalPages ?? 0}
                     photosPerPage={a4Layout?.photosPerPage ?? 0}
@@ -823,7 +838,7 @@ export default function PassportPhoto() {
                     cols={a4Layout?.cols ?? gridCols}
                     rows={a4Layout?.rows ?? gridRows}
                     sheet={sheet}
-                    landscape={sheetLandscape}
+                    landscape={layoutLandscape}
                     upscaleFactor={upscaleFactor}
                     isLoading={isGenerating}
                   />
