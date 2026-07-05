@@ -8,7 +8,7 @@ interface CopiesSelectorProps {
   onChange: (val: number) => void;
 }
 
-const PRESETS = [5, 10, 15, 20];
+const PRESETS = [5, 8, 10, 15, 20];
 const MIN_COPIES = 1;
 const MAX_COPIES = 48;
 

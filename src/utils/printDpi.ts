@@ -5,19 +5,67 @@ export interface PrintDpiConfig {
   metaDPI: number;
   exportWidth: number;
   exportHeight: number;
+  targetDPI: number;
+  sheetWidthMm: number;
+  sheetHeightMm: number;
 }
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
 
+/** Conservative pixel-area cap — toBlob often fails above this even when alloc succeeds. */
+const SAFE_MAX_AREA_PX = 56 * 1024 * 1024;
+
+let _maxCanvasEdgePx: number | null = null;
+
 export function mmToPxAtDpi(mm: number, dpi: number): number {
   return Math.round((mm / 25.4) * dpi);
+}
+
+function probeMaxCanvasEdgePx(): number {
+  if (typeof document === 'undefined') return 8192;
+
+  for (const size of [16384, 8192, 4096, 2048]) {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      if (canvas.width !== size || canvas.height !== size) continue;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+      ctx.fillRect(0, 0, 1, 1);
+      if (ctx.getImageData(0, 0, 1, 1).data[3] > 0) return size;
+    } catch {
+      // try next size
+    }
+  }
+
+  return 2048;
+}
+
+/** Longest canvas edge this browser can reliably allocate (cached). */
+export function getMaxCanvasEdgePx(): number {
+  if (_maxCanvasEdgePx === null) {
+    _maxCanvasEdgePx = probeMaxCanvasEdgePx();
+  }
+  return _maxCanvasEdgePx;
+}
+
+export function fitsCanvasLimits(width: number, height: number): boolean {
+  const maxEdge = getMaxCanvasEdgePx();
+  return (
+    width > 0 &&
+    height > 0 &&
+    width <= maxEdge &&
+    height <= maxEdge &&
+    width * height <= SAFE_MAX_AREA_PX
+  );
 }
 
 /** Whether browser can allocate and draw on a canvas of this size. */
 export function canCreateCanvas(width: number, height: number): boolean {
   if (typeof document === 'undefined') return false;
-  if (width <= 0 || height <= 0) return false;
+  if (!fitsCanvasLimits(width, height)) return false;
 
   try {
     const canvas = document.createElement('canvas');
@@ -33,38 +81,46 @@ export function canCreateCanvas(width: number, height: number): boolean {
   }
 }
 
+/** Highest DPI that fits canvas limits for a sheet at true pixel dimensions. */
+export function getMaxNativeDpi(
+  targetDpi: number,
+  sheetWidthMm: number,
+  sheetHeightMm: number
+): number {
+  let best = 300;
+  for (let dpi = 300; dpi <= targetDpi; dpi += 50) {
+    const w = mmToPxAtDpi(sheetWidthMm, dpi);
+    const h = mmToPxAtDpi(sheetHeightMm, dpi);
+    if (canCreateCanvas(w, h)) {
+      best = dpi;
+    } else {
+      break;
+    }
+  }
+  return best;
+}
+
 function configForDpi(
   targetDpi: number,
   sheetWidthMm: number = A4_WIDTH_MM,
   sheetHeightMm: number = A4_HEIGHT_MM
 ): PrintDpiConfig {
+  const nativeDpi = getMaxNativeDpi(targetDpi, sheetWidthMm, sheetHeightMm);
+  const canvasWidth = mmToPxAtDpi(sheetWidthMm, nativeDpi);
+  const canvasHeight = mmToPxAtDpi(sheetHeightMm, nativeDpi);
   const exportWidth = mmToPxAtDpi(sheetWidthMm, targetDpi);
   const exportHeight = mmToPxAtDpi(sheetHeightMm, targetDpi);
-
-  let renderDpi = targetDpi;
-  while (renderDpi >= 300) {
-    const w = mmToPxAtDpi(sheetWidthMm, renderDpi);
-    const h = mmToPxAtDpi(sheetHeightMm, renderDpi);
-    if (canCreateCanvas(w, h)) break;
-    renderDpi -= 50;
-  }
-
-  if (renderDpi < 300) {
-    renderDpi = 300;
-  }
-
-  const canvasWidth = mmToPxAtDpi(sheetWidthMm, renderDpi);
-  const canvasHeight = mmToPxAtDpi(sheetHeightMm, renderDpi);
-  const canExportAtTarget =
-    renderDpi === targetDpi && canCreateCanvas(exportWidth, exportHeight);
 
   return {
     canvasWidth,
     canvasHeight,
-    renderDPI: renderDpi,
-    metaDPI: canExportAtTarget ? targetDpi : renderDpi,
-    exportWidth: canExportAtTarget ? exportWidth : canvasWidth,
-    exportHeight: canExportAtTarget ? exportHeight : canvasHeight,
+    renderDPI: nativeDpi,
+    metaDPI: targetDpi,
+    exportWidth,
+    exportHeight,
+    targetDPI: targetDpi,
+    sheetWidthMm,
+    sheetHeightMm,
   };
 }
 
@@ -161,16 +217,203 @@ export function finalizeA4Canvas(canvas: HTMLCanvasElement, config: PrintDpiConf
     return canvas;
   }
 
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, config.exportWidth, config.exportHeight);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(canvas, 0, 0, config.exportWidth, config.exportHeight);
   return output;
 }
 
+/** Upscale in vertical tiles when the full export canvas is too large (e.g. A4 @ 1200 DPI). */
+async function finalizeA4CanvasTiled(
+  canvas: HTMLCanvasElement,
+  config: PrintDpiConfig
+): Promise<HTMLCanvasElement | null> {
+  const { exportWidth, exportHeight } = config;
+  if (canvas.width === exportWidth && canvas.height === exportHeight) {
+    return canvas;
+  }
+
+  const maxEdge = getMaxCanvasEdgePx();
+  const tileHeight = Math.min(
+    maxEdge,
+    Math.max(512, Math.floor(SAFE_MAX_AREA_PX / exportWidth))
+  );
+  const tileCount = Math.ceil(exportHeight / tileHeight);
+  const tileCanvases: HTMLCanvasElement[] = [];
+
+  for (let i = 0; i < tileCount; i++) {
+    const destY = i * tileHeight;
+    const destH = Math.min(tileHeight, exportHeight - destY);
+    if (!canCreateCanvas(exportWidth, destH)) {
+      return null;
+    }
+
+    const tile = document.createElement('canvas');
+    tile.width = exportWidth;
+    tile.height = destH;
+    const ctx = tile.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, exportWidth, destH);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const srcY = (destY / exportHeight) * canvas.height;
+    const srcH = (destH / exportHeight) * canvas.height;
+    ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, exportWidth, destH);
+    tileCanvases.push(tile);
+  }
+
+  if (!canCreateCanvas(exportWidth, exportHeight)) {
+    return null;
+  }
+
+  const output = document.createElement('canvas');
+  output.width = exportWidth;
+  output.height = exportHeight;
+  const outCtx = output.getContext('2d');
+  if (!outCtx) return null;
+
+  outCtx.fillStyle = '#ffffff';
+  outCtx.fillRect(0, 0, exportWidth, exportHeight);
+  for (let i = 0; i < tileCanvases.length; i++) {
+    outCtx.drawImage(tileCanvases[i], 0, i * tileHeight);
+  }
+
+  return output;
+}
+
+type ExportLayoutResult =
+  | { kind: 'canvas'; canvas: HTMLCanvasElement; metaDpi: number }
+  | { kind: 'buffer'; pngBuffer: ArrayBuffer; metaDpi: number };
+
+/** GPU resize path — often succeeds when allocating a full export canvas does not. */
+async function upscaleViaImageBitmap(
+  canvas: HTMLCanvasElement,
+  config: PrintDpiConfig
+): Promise<ExportLayoutResult | null> {
+  const { exportWidth, exportHeight } = config;
+  if (canvas.width === exportWidth && canvas.height === exportHeight) {
+    return { kind: 'canvas', canvas, metaDpi: config.targetDPI };
+  }
+
+  if (typeof createImageBitmap !== 'function') {
+    return null;
+  }
+
+  try {
+    const bitmap = await createImageBitmap(canvas, {
+      resizeWidth: exportWidth,
+      resizeHeight: exportHeight,
+      resizeQuality: 'high',
+    });
+
+    if (typeof OffscreenCanvas !== 'undefined') {
+      const offscreen = new OffscreenCanvas(exportWidth, exportHeight);
+      const ctx = offscreen.getContext('2d');
+      if (!ctx) {
+        bitmap.close();
+        return null;
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, exportWidth, exportHeight);
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      try {
+        const blob = await offscreen.convertToBlob({ type: 'image/png' });
+        return { kind: 'buffer', pngBuffer: await blob.arrayBuffer(), metaDpi: config.targetDPI };
+      } catch {
+        return null;
+      }
+    }
+
+    if (!canCreateCanvas(exportWidth, exportHeight)) {
+      bitmap.close();
+      return null;
+    }
+
+    const output = document.createElement('canvas');
+    output.width = exportWidth;
+    output.height = exportHeight;
+    const ctx = output.getContext('2d');
+    if (!ctx) {
+      bitmap.close();
+      return null;
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return { kind: 'canvas', canvas: output, metaDpi: config.targetDPI };
+  } catch {
+    return null;
+  }
+}
+
+async function exportLayoutCanvas(
+  canvas: HTMLCanvasElement,
+  config: PrintDpiConfig
+): Promise<ExportLayoutResult> {
+  if (canvas.width === config.exportWidth && canvas.height === config.exportHeight) {
+    return { kind: 'canvas', canvas, metaDpi: config.targetDPI };
+  }
+
+  const direct = finalizeA4Canvas(canvas, config);
+  if (direct.width === config.exportWidth && direct.height === config.exportHeight) {
+    try {
+      await canvasToPngBuffer(direct);
+      return { kind: 'canvas', canvas: direct, metaDpi: config.targetDPI };
+    } catch {
+      // try other upscale paths
+    }
+  }
+
+  const bitmapUpscale = await upscaleViaImageBitmap(canvas, config);
+  if (bitmapUpscale) {
+    if (bitmapUpscale.kind === 'buffer') {
+      return bitmapUpscale;
+    }
+    try {
+      await canvasToPngBuffer(bitmapUpscale.canvas);
+      return bitmapUpscale;
+    } catch {
+      // try tiled upscale below
+    }
+  }
+
+  const tiled = await finalizeA4CanvasTiled(canvas, config);
+  if (tiled) {
+    try {
+      await canvasToPngBuffer(tiled);
+      return { kind: 'canvas', canvas: tiled, metaDpi: config.targetDPI };
+    } catch {
+      // fall back to native render resolution
+    }
+  }
+
+  return { kind: 'canvas', canvas, metaDpi: config.renderDPI };
+}
+
 /** Blob URL — used for A4 sheet pages. */
 export async function canvasToPngBlobUrl(canvas: HTMLCanvasElement, metaDpi: number): Promise<string> {
   const pngWithDpi = injectPngDpi(await canvasToPngBuffer(canvas), metaDpi);
   return URL.createObjectURL(new Blob([pngWithDpi], { type: 'image/png' }));
+}
+
+/** Export a rendered layout page, upscaling to target DPI when possible. */
+export async function canvasToPngBlobUrlForPrint(
+  canvas: HTMLCanvasElement,
+  config: PrintDpiConfig
+): Promise<string> {
+  const exported = await exportLayoutCanvas(canvas, config);
+  if (exported.kind === 'buffer') {
+    const pngWithDpi = injectPngDpi(exported.pngBuffer, exported.metaDpi);
+    return URL.createObjectURL(new Blob([pngWithDpi], { type: 'image/png' }));
+  }
+  return canvasToPngBlobUrl(exported.canvas, exported.metaDpi);
 }
 
 /** Data URL — used for in-memory passport photo pipeline. */
