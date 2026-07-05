@@ -15,8 +15,41 @@ export interface PrintGridLimits {
 
 export interface LayoutGridOptions {
   paddingMm?: number;
+  paddingTopMm?: number;
+  paddingBottomMm?: number;
+  paddingLeftMm?: number;
+  paddingRightMm?: number;
   marginMm?: number;
   rotatePhotosOnSheet?: boolean;
+  centerGridOnSheet?: boolean;
+}
+
+export interface SheetPaddingMm {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+export function resolveSheetPadding(options: LayoutGridOptions): SheetPaddingMm {
+  const base = options.paddingMm ?? PAGE_PADDING_MM;
+  return {
+    top: options.paddingTopMm ?? base,
+    bottom: options.paddingBottomMm ?? base,
+    left: options.paddingLeftMm ?? base,
+    right: options.paddingRightMm ?? base,
+  };
+}
+
+export function getLayoutOptionsForSheet(sheet: SheetSize): LayoutGridOptions {
+  return {
+    paddingMm: sheet.layoutPaddingMm ?? PAGE_PADDING_MM,
+    paddingTopMm: sheet.layoutPaddingTopMm,
+    paddingBottomMm: sheet.layoutPaddingBottomMm,
+    marginMm: sheet.layoutMarginMm ?? PHOTO_MARGIN_MM,
+    rotatePhotosOnSheet: sheet.rotatePhotosOnSheet ?? false,
+    centerGridOnSheet: sheet.centerGridOnSheet ?? false,
+  };
 }
 
 export function getCellDimensionsMm(
@@ -30,14 +63,6 @@ export function getCellDimensionsMm(
   return { cellWidthMm: photoHeightMm, cellHeightMm: photoWidthMm };
 }
 
-export function getLayoutOptionsForSheet(sheet: SheetSize): LayoutGridOptions {
-  return {
-    paddingMm: sheet.layoutPaddingMm ?? PAGE_PADDING_MM,
-    marginMm: sheet.layoutMarginMm ?? PHOTO_MARGIN_MM,
-    rotatePhotosOnSheet: sheet.rotatePhotosOnSheet ?? false,
-  };
-}
-
 export function computePrintGrid(
   photoWidthMm: number,
   photoHeightMm: number,
@@ -45,7 +70,7 @@ export function computePrintGrid(
   sheetHeightMm: number,
   options: LayoutGridOptions = {}
 ): PrintGridLimits {
-  const paddingMm = options.paddingMm ?? PAGE_PADDING_MM;
+  const padding = resolveSheetPadding(options);
   const marginMm = options.marginMm ?? PHOTO_MARGIN_MM;
   const rotatePhotosOnSheet = options.rotatePhotosOnSheet ?? false;
   const { cellWidthMm, cellHeightMm } = getCellDimensionsMm(
@@ -54,8 +79,8 @@ export function computePrintGrid(
     rotatePhotosOnSheet
   );
 
-  const usableWidth = sheetWidthMm - 2 * paddingMm;
-  const usableHeight = sheetHeightMm - 2 * paddingMm;
+  const usableWidth = sheetWidthMm - padding.left - padding.right;
+  const usableHeight = sheetHeightMm - padding.top - padding.bottom;
 
   const maxCols = Math.max(
     1,
@@ -92,12 +117,14 @@ export function getLayoutUsedSizeMm(
   rows: number,
   cellWidthMm: number,
   cellHeightMm: number,
-  paddingMm: number,
+  padding: SheetPaddingMm,
   marginMm: number
 ): { widthMm: number; heightMm: number } {
   return {
-    widthMm: cols * cellWidthMm + Math.max(0, cols - 1) * marginMm + 2 * paddingMm,
-    heightMm: rows * cellHeightMm + Math.max(0, rows - 1) * marginMm + 2 * paddingMm,
+    widthMm:
+      cols * cellWidthMm + Math.max(0, cols - 1) * marginMm + padding.left + padding.right,
+    heightMm:
+      rows * cellHeightMm + Math.max(0, rows - 1) * marginMm + padding.top + padding.bottom,
   };
 }
 
@@ -110,14 +137,14 @@ export function layoutFitsOnSheet(
   sheetHeightMm: number,
   options: LayoutGridOptions = {}
 ): boolean {
-  const paddingMm = options.paddingMm ?? PAGE_PADDING_MM;
+  const padding = resolveSheetPadding(options);
   const marginMm = options.marginMm ?? PHOTO_MARGIN_MM;
   const { cellWidthMm, cellHeightMm } = getCellDimensionsMm(
     photoWidthMm,
     photoHeightMm,
     options.rotatePhotosOnSheet ?? false
   );
-  const used = getLayoutUsedSizeMm(cols, rows, cellWidthMm, cellHeightMm, paddingMm, marginMm);
+  const used = getLayoutUsedSizeMm(cols, rows, cellWidthMm, cellHeightMm, padding, marginMm);
   return used.widthMm <= sheetWidthMm + 0.01 && used.heightMm <= sheetHeightMm + 0.01;
 }
 

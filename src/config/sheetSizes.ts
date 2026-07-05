@@ -7,10 +7,16 @@ export interface SheetSize {
   pdfFormat: [number, number];
   /** Tighter padding for small photo paper (defaults to 5 mm). */
   layoutPaddingMm?: number;
+  /** Extra top inset (defaults to layoutPaddingMm). */
+  layoutPaddingTopMm?: number;
+  /** Extra bottom inset for printer margin (defaults to layoutPaddingMm). */
+  layoutPaddingBottomMm?: number;
   /** Gap between photos (defaults to 3 mm). */
   layoutMarginMm?: number;
   /** Rotate each photo 90° — fits 8× on portrait 4×6 at true print size. */
   rotatePhotosOnSheet?: boolean;
+  /** Center the photo grid on the sheet (within min edge padding). */
+  centerGridOnSheet?: boolean;
   /** Lock to portrait — avoids clipped prints on 4×6 photo-paper trays. */
   portraitOnly?: boolean;
   /** Prefer landscape when it fits more photos at true print size (e.g. 4×6 → 4×2). */
@@ -31,6 +37,7 @@ export const SHEET_SIZES: SheetSize[] = [
     layoutPaddingMm: 2,
     layoutMarginMm: 1,
     rotatePhotosOnSheet: true,
+    centerGridOnSheet: true,
     portraitOnly: true,
   },
   {
