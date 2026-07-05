@@ -1,8 +1,7 @@
 import type { A4LayoutResult } from './generateA4Layout';
 import {
-  canvasToPngBlobUrl,
+  canvasToPngBlobUrlForPrint,
   createA4Canvas,
-  finalizeA4Canvas,
   getPrintDpiConfig,
   mmToPxAtDpi,
   type PrintDpiConfig,
@@ -69,7 +68,7 @@ export async function generateIdCardA4Layout(
     A4_SHEET.widthMm,
     A4_SHEET.heightMm
   );
-  const { canvasWidth, canvasHeight, renderDPI, metaDPI } = dpiConfig;
+  const { canvasWidth, canvasHeight, renderDPI } = dpiConfig;
 
   const paddingPx = mmToPxAtDpi(PAGE_PADDING_MM, renderDPI);
   const cardGapPx = mmToPxAtDpi(CARD_GAP_MM, renderDPI);
@@ -125,7 +124,7 @@ export async function generateIdCardA4Layout(
       originY += setHeightPx + setGapPx;
     }
 
-    pages.push(await canvasToPngBlobUrl(finalizeA4Canvas(canvas, dpiConfig), metaDPI));
+    pages.push(await canvasToPngBlobUrlForPrint(canvas, dpiConfig));
   }
 
   return {

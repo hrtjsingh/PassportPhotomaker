@@ -22,6 +22,7 @@ export interface LayoutGridOptions {
   marginMm?: number;
   rotatePhotosOnSheet?: boolean;
   centerGridOnSheet?: boolean;
+  alignGridTopOnSheet?: boolean;
   defaultGridCols?: number;
   defaultGridRows?: number;
 }
@@ -51,6 +52,7 @@ export function getLayoutOptionsForSheet(sheet: SheetSize): LayoutGridOptions {
     marginMm: sheet.layoutMarginMm ?? PHOTO_MARGIN_MM,
     rotatePhotosOnSheet: sheet.rotatePhotosOnSheet ?? false,
     centerGridOnSheet: sheet.centerGridOnSheet ?? false,
+    alignGridTopOnSheet: sheet.alignGridTopOnSheet ?? false,
     defaultGridCols: sheet.defaultGridCols,
     defaultGridRows: sheet.defaultGridRows,
   };

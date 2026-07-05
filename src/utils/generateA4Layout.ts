@@ -1,7 +1,6 @@
 import {
-  canvasToPngBlobUrl,
+  canvasToPngBlobUrlForPrint,
   createA4Canvas,
-  finalizeA4Canvas,
   getPrintDpiConfig,
   mmToPxAtDpi,
   type PrintDpiConfig,
@@ -132,7 +131,7 @@ export async function generateA4Layout(
   const rotatePhotosOnSheet = layoutOptions.rotatePhotosOnSheet ?? false;
 
   const dpiConfig: PrintDpiConfig = getPrintDpiConfig(dpi, sheetWidthMm, sheetHeightMm);
-  const { canvasWidth, canvasHeight, renderDPI, metaDPI } = dpiConfig;
+  const { canvasWidth, canvasHeight, renderDPI } = dpiConfig;
 
   const marginPx = mmToPxAtDpi(marginMm, renderDPI);
   const { widthPx: photoWidthPx, heightPx: photoHeightPx } = getPhotoDrawSizePx(
@@ -172,9 +171,10 @@ export async function generateA4Layout(
   const offsetX = layoutOptions.centerGridOnSheet
     ? Math.round((canvasWidth - gridWidthPx) / 2)
     : minOffsetX;
-  const offsetY = layoutOptions.centerGridOnSheet
-    ? Math.round((canvasHeight - gridHeightPx) / 2)
-    : mmToPxAtDpi(padding.top, renderDPI);
+  const offsetY =
+    layoutOptions.centerGridOnSheet && !layoutOptions.alignGridTopOnSheet
+      ? Math.round((canvasHeight - gridHeightPx) / 2)
+      : mmToPxAtDpi(padding.top, renderDPI);
 
   const totalPages = Math.max(1, Math.ceil(numCopies / photosPerPage));
   const scaleFactor = renderDPI / 300;
@@ -217,7 +217,7 @@ export async function generateA4Layout(
       );
     }
 
-    pages.push(await canvasToPngBlobUrl(finalizeA4Canvas(canvas, dpiConfig), metaDPI));
+    pages.push(await canvasToPngBlobUrlForPrint(canvas, dpiConfig));
   }
 
   return {

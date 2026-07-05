@@ -17,6 +17,8 @@ export interface SheetSize {
   rotatePhotosOnSheet?: boolean;
   /** Center the photo grid on the sheet (within min edge padding). */
   centerGridOnSheet?: boolean;
+  /** When centerGridOnSheet is set, keep vertical alignment at padding.top instead of centering. */
+  alignGridTopOnSheet?: boolean;
   /** Preferred grid when it fits (e.g. 4×6 → 2×4 = 8 photos). */
   defaultGridCols?: number;
   defaultGridRows?: number;
@@ -38,11 +40,10 @@ export const SHEET_SIZES: SheetSize[] = [
     heightMm: 6 * IN,
     pdfFormat: [4 * IN, 6 * IN],
     layoutPaddingMm: 2,
-    layoutPaddingTopMm: 8,
-    layoutPaddingBottomMm: 5,
     layoutMarginMm: 2,
     rotatePhotosOnSheet: true,
     centerGridOnSheet: true,
+    alignGridTopOnSheet: true,
     portraitOnly: true,
     defaultGridCols: 2,
     defaultGridRows: 4,
