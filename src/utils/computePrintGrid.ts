@@ -22,6 +22,8 @@ export interface LayoutGridOptions {
   marginMm?: number;
   rotatePhotosOnSheet?: boolean;
   centerGridOnSheet?: boolean;
+  defaultGridCols?: number;
+  defaultGridRows?: number;
 }
 
 export interface SheetPaddingMm {
@@ -49,6 +51,8 @@ export function getLayoutOptionsForSheet(sheet: SheetSize): LayoutGridOptions {
     marginMm: sheet.layoutMarginMm ?? PHOTO_MARGIN_MM,
     rotatePhotosOnSheet: sheet.rotatePhotosOnSheet ?? false,
     centerGridOnSheet: sheet.centerGridOnSheet ?? false,
+    defaultGridCols: sheet.defaultGridCols,
+    defaultGridRows: sheet.defaultGridRows,
   };
 }
 
@@ -91,11 +95,18 @@ export function computePrintGrid(
     Math.floor((usableHeight + marginMm) / (cellHeightMm + marginMm))
   );
 
+  const defaultCols = options.defaultGridCols
+    ? Math.min(options.defaultGridCols, maxCols)
+    : maxCols;
+  const defaultRows = options.defaultGridRows
+    ? Math.min(options.defaultGridRows, maxRows)
+    : maxRows;
+
   return {
     maxCols,
     maxRows,
-    defaultCols: maxCols,
-    defaultRows: maxRows,
+    defaultCols,
+    defaultRows,
     photosPerPage: maxCols * maxRows,
     rotatePhotosOnSheet,
   };

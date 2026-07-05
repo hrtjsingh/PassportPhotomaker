@@ -2,7 +2,7 @@ import React from 'react';
 import { Check, Globe } from 'lucide-react';
 
 const COUNTRIES = [
-  { code: 'IN', name: 'India', size: '35×45mm' },
+  { code: 'IN', name: 'India', size: '33×43mm' },
   { code: 'US', name: 'USA', size: '2×2"' },
   { code: 'GB', name: 'UK', size: '35×45mm' },
   { code: 'CN', name: 'China', size: '33×48mm' },

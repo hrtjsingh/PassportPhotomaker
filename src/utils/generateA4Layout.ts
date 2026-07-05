@@ -168,9 +168,10 @@ export async function generateA4Layout(
   const gridWidthPx = cols * cellWidthPx + Math.max(0, cols - 1) * marginPx;
   const gridHeightPx = rows * cellHeightPx + Math.max(0, rows - 1) * marginPx;
 
+  const minOffsetX = mmToPxAtDpi(padding.left, renderDPI);
   const offsetX = layoutOptions.centerGridOnSheet
     ? Math.round((canvasWidth - gridWidthPx) / 2)
-    : mmToPxAtDpi(padding.left, renderDPI);
+    : minOffsetX;
   const offsetY = layoutOptions.centerGridOnSheet
     ? Math.round((canvasHeight - gridHeightPx) / 2)
     : mmToPxAtDpi(padding.top, renderDPI);

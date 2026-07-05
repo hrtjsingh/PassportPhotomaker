@@ -17,6 +17,9 @@ export interface SheetSize {
   rotatePhotosOnSheet?: boolean;
   /** Center the photo grid on the sheet (within min edge padding). */
   centerGridOnSheet?: boolean;
+  /** Preferred grid when it fits (e.g. 4×6 → 2×4 = 8 photos). */
+  defaultGridCols?: number;
+  defaultGridRows?: number;
   /** Lock to portrait — avoids clipped prints on 4×6 photo-paper trays. */
   portraitOnly?: boolean;
   /** Prefer landscape when it fits more photos at true print size (e.g. 4×6 → 4×2). */
@@ -25,44 +28,24 @@ export interface SheetSize {
 
 const IN = 25.4;
 
-/** Standard photo-paper sizes plus A4 for multi-photo sheets. */
+/** 4×6 photo paper and A4 multi-photo sheets. */
 export const SHEET_SIZES: SheetSize[] = [
   {
     id: '4x6',
     label: '4×6"',
-    sublabel: '10×15 cm · 8 photos',
+    sublabel: '10×15 cm · 8 per page',
     widthMm: 4 * IN,
     heightMm: 6 * IN,
     pdfFormat: [4 * IN, 6 * IN],
     layoutPaddingMm: 2,
-    layoutMarginMm: 1,
+    layoutPaddingTopMm: 8,
+    layoutPaddingBottomMm: 5,
+    layoutMarginMm: 2,
     rotatePhotosOnSheet: true,
     centerGridOnSheet: true,
     portraitOnly: true,
-  },
-  {
-    id: '5x7',
-    label: '5×7"',
-    sublabel: '13×18 cm',
-    widthMm: 5 * IN,
-    heightMm: 7 * IN,
-    pdfFormat: [5 * IN, 7 * IN],
-  },
-  {
-    id: '6x8',
-    label: '6×8"',
-    sublabel: '15×20 cm',
-    widthMm: 6 * IN,
-    heightMm: 8 * IN,
-    pdfFormat: [6 * IN, 8 * IN],
-  },
-  {
-    id: '8x10',
-    label: '8×10"',
-    sublabel: '20×25 cm',
-    widthMm: 8 * IN,
-    heightMm: 10 * IN,
-    pdfFormat: [8 * IN, 10 * IN],
+    defaultGridCols: 2,
+    defaultGridRows: 4,
   },
   {
     id: 'a4',

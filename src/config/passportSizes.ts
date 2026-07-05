@@ -10,9 +10,9 @@ export const PASSPORT_SIZES: PassportSize[] = [
   {
     id: 'india',
     name: 'India Passport',
-    widthMm: 35,
-    heightMm: 45,
-    description: '35mm × 45mm',
+    widthMm: 33,
+    heightMm: 43,
+    description: '33mm × 43mm',
   },
   {
     id: 'us',
