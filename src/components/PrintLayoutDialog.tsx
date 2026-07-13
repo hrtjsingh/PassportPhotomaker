@@ -758,7 +758,7 @@ function PrintPageCanvas({
   return (
     <div
       className={cn(
-        'print-layout-page relative bg-[#d9d9d9]! overflow-hidden',
+        'print-layout-page relative overflow-hidden',
         pageBreak && 'print-layout-page-break',
         previewChrome && 'border border-[#e8dcc8]/25'
       )}
