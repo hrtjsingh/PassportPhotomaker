@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   RotateCcw,
@@ -17,15 +17,13 @@ import { BackgroundSelector } from './BackgroundSelector';
 import { SizeSelector } from './SizeSelector';
 import { CopiesSelector } from './CopiesSelector';
 import { UpscaleSelector } from './UpscaleSelector';
-import { A4Preview } from './A4Preview';
-import { PrintLayoutControls } from './PrintLayoutControls';
 import { DownloadButtons } from './DownloadButtons';
+import { PrintLayoutEditor, type PrintLayoutEditorHandle } from './PrintLayoutDialog';
 
 import getCroppedImg from '../utils/cropImage';
 import { generatePassportPhoto } from '../utils/generatePassportPhoto';
 import { generateA4Layout, computePrintGrid, type A4LayoutResult } from '../utils/generateA4Layout';
 import { exportPDF } from '../utils/exportPDF';
-import { getPrintPageDimensions, preparePagesForPrint } from '../utils/preparePrintPage';
 import { clampGridToFitSheet, getLayoutOptionsForSheet } from '../utils/computePrintGrid';
 import { getEffectiveLandscape, getSheetById, getOrientedSheet, A4_SHEET } from '../config/sheetSizes';
 import { PassportSize, PASSPORT_SIZES } from '../config/passportSizes';
@@ -38,7 +36,7 @@ import { STUDIO_STEPS } from '../config/studioSteps';
 import { StepFooter } from './StepFooter';
 import { Button } from './ui/Button';
 import { BrandLogo } from './BrandLogo';
-import { BRAND_NAME, BRAND_TAGLINE, BRAND_DESCRIPTION } from '../config/brand';
+import { BRAND_TAGLINE, BRAND_DESCRIPTION } from '../config/brand';
 import { usePageSEO } from '../hooks/usePageSEO';
 import { Link } from 'react-router-dom';
 
@@ -102,6 +100,7 @@ export default function PassportPhoto() {
   const [bgRemovalSkipped, setBgRemovalSkipped] = useState(false);
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const printLayoutRef = useRef<PrintLayoutEditorHandle>(null);
 
   const photoWidthMm = selectedSize.id === 'custom' ? customWidth : selectedSize.widthMm;
   const photoHeightMm = selectedSize.id === 'custom' ? customHeight : selectedSize.heightMm;
@@ -442,66 +441,8 @@ export default function PassportPhoto() {
     setShowResetConfirm(false);
   };
 
-  const handlePrint = async () => {
-    if (!a4Layout?.pages.length) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const printPage = getPrintPageDimensions(sheet, sheetLandscape);
-    const pageOrientation =
-      printPage.heightMm >= printPage.widthMm ? 'portrait' : 'landscape';
-    const pages = await preparePagesForPrint(a4Layout.pages);
-
-    const pagesHtml = pages
-      .map(
-        (src) =>
-          `<div class="page"><img src="${src}" alt="Passport photo sheet" /></div>`
-      )
-      .join('');
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print — ${BRAND_NAME}</title>
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            html, body {
-              margin: 0;
-              padding: 0;
-              width: ${printPage.widthMm}mm;
-            }
-            .page {
-              width: ${printPage.widthMm}mm;
-              height: ${printPage.heightMm}mm;
-              margin: 0;
-              padding: 0;
-              position: relative;
-              overflow: hidden;
-              page-break-after: always;
-            }
-            .page:last-child { page-break-after: auto; }
-            img {
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: ${printPage.widthMm}mm;
-              height: ${printPage.heightMm}mm;
-              display: block;
-              object-fit: fill;
-              object-position: left top;
-            }
-            @page {
-              size: ${printPage.widthMm}mm ${printPage.heightMm}mm ${pageOrientation};
-              margin: 0;
-            }
-          </style>
-        </head>
-        <body onload="window.print();window.close()">
-          ${pagesHtml}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+  const handlePrint = () => {
+    printLayoutRef.current?.print();
   };
 
   return (
@@ -811,36 +752,47 @@ export default function PassportPhoto() {
                 <StepHeader
                   step={6}
                   title="Ready to print"
-                  description="Pick photo paper size and grid, then download or print."
+                  description="Configure your sheet, adjust the print layout, then download or print."
                 />
 
-                <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                  <PrintLayoutControls
-                    sheetId={sheetId}
-                    onSheetChange={handleSheetChange}
-                    cols={gridCols}
-                    rows={gridRows}
-                    onColsChange={(value) => setGridCols(Math.min(value, gridLimits.maxCols))}
-                    onRowsChange={(value) => setGridRows(Math.min(value, gridLimits.maxRows))}
-                    gridLimits={gridLimits}
+                <StepFooter
+                  onBack={() => setCurrentStep('settings')}
+                  backLabel="Back to Print Settings"
+                  className="max-w-6xl"
+                />
+
+                <div className="w-full max-w-6xl">
+                  <PrintLayoutEditor
+                    ref={printLayoutRef}
+                    variant="inline"
+                    imageSrc={passportPhoto ?? ''}
                     photoWidthMm={photoWidthMm}
                     photoHeightMm={photoHeightMm}
-                    landscape={sheetLandscape}
-                    onLandscapeChange={handleLandscapeChange}
-                  />
-
-                  <A4Preview
-                    key={`${sheetId}-${layoutLandscape}-${gridCols}-${gridRows}-${numCopies}`}
-                    pages={a4Layout?.pages ?? []}
-                    totalPages={a4Layout?.totalPages ?? 0}
-                    photosPerPage={a4Layout?.photosPerPage ?? 0}
-                    totalCopies={a4Layout?.totalCopies ?? 0}
-                    cols={a4Layout?.cols ?? gridCols}
-                    rows={a4Layout?.rows ?? gridRows}
-                    sheet={sheet}
+                    paperId={sheetId}
                     landscape={layoutLandscape}
-                    upscaleFactor={upscaleFactor}
-                    isLoading={isGenerating}
+                    showPaperControls={false}
+                    sheetPages={a4Layout?.pages ?? []}
+                    isSheetLoading={isGenerating}
+                    sheetLabel={sheet.label}
+                    sheetCols={a4Layout?.cols ?? gridCols}
+                    sheetRows={a4Layout?.rows ?? gridRows}
+                    totalPages={a4Layout?.totalPages ?? 0}
+                    totalCopies={a4Layout?.totalCopies ?? 0}
+                    sheetPageWidthMm={orientedSheet.widthMm}
+                    sheetPageHeightMm={orientedSheet.heightMm}
+                    sheetControls={{
+                      sheetId,
+                      onSheetChange: handleSheetChange,
+                      cols: gridCols,
+                      rows: gridRows,
+                      onColsChange: (value) => setGridCols(Math.min(value, gridLimits.maxCols)),
+                      onRowsChange: (value) => setGridRows(Math.min(value, gridLimits.maxRows)),
+                      gridLimits,
+                      photoWidthMm,
+                      photoHeightMm,
+                      landscape: sheetLandscape,
+                      onLandscapeChange: handleLandscapeChange,
+                    }}
                   />
                 </div>
 
@@ -863,12 +815,6 @@ export default function PassportPhoto() {
                   }}
                   onPrint={handlePrint}
                   disabled={isGenerating || !a4Layout?.pages.length}
-                />
-
-                <StepFooter
-                  onBack={() => setCurrentStep('settings')}
-                  backLabel="Back to Print Settings"
-                  className="mt-2"
                 />
               </div>
             )}

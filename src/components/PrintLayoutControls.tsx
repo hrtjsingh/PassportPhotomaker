@@ -17,6 +17,8 @@ interface PrintLayoutControlsProps {
   photoHeightMm: number;
   landscape: boolean;
   onLandscapeChange: (landscape: boolean) => void;
+  /** Strip card chrome — for embedding in print preview sidebar. */
+  embedded?: boolean;
 }
 
 function GridStepper({
@@ -87,21 +89,24 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
   photoHeightMm,
   landscape,
   onLandscapeChange,
+  embedded = false,
 }) => {
   const photosPerPage = cols * rows;
   const selectedSheet = SHEET_SIZES.find((s) => s.id === sheetId) ?? SHEET_SIZES[0];
 
-  return (
-    <div className="card-elevated p-4 md:p-6 space-y-6 w-full">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-brand-700/20 flex items-center justify-center">
-          <FileText className="w-4 h-4 text-brand-300" />
+  const content = (
+    <>
+      {!embedded && (
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-brand-700/20 flex items-center justify-center">
+            <FileText className="w-4 h-4 text-brand-300" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-snapid-text">Photo paper &amp; layout</h3>
+            <p className="text-xs text-snapid-muted">Paper size and photo grid per sheet</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-sm font-semibold text-snapid-text">Photo paper &amp; layout</h3>
-          <p className="text-xs text-snapid-muted">Paper size and photo grid per sheet</p>
-        </div>
-      </div>
+      )}
 
       <div className="space-y-2">
         <p className="text-xs font-medium text-snapid-text">Photo paper size</p>
@@ -205,6 +210,12 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
           </p>
         )}
       </div>
-    </div>
+    </>
   );
+
+  if (embedded) {
+    return <div className="space-y-5">{content}</div>;
+  }
+
+  return <div className="card-elevated p-4 md:p-6 space-y-6 w-full">{content}</div>;
 };

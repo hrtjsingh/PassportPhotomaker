@@ -241,3 +241,35 @@
     }
   }
 }
+
+@media print {
+  body.snapid-print-layout > *:not(.snapid-print-surface) {
+    display: none !important;
+  }
+
+  body.snapid-print-layout .snapid-print-surface {
+    display: block !important;
+  }
+
+  body.snapid-print-layout .print-layout-page {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: hidden !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body.snapid-print-layout .print-layout-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  body.snapid-print-layout .print-bleed-guide {
+    display: none !important;
+  }
+}
