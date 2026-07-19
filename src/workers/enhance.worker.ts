@@ -63,9 +63,7 @@ self.onmessage = async (event: MessageEvent<EnhanceWorkerCommand>) => {
       });
       const result = await upscaler(data.blob);
       const outBlob = await result.toBlob('image/png');
-      self.postMessage({ type: 'complete', id: data.id, blob: outBlob } satisfies EnhanceWorkerEvent, {
-        transfer: [outBlob],
-      });
+      self.postMessage({ type: 'complete', id: data.id, blob: outBlob } satisfies EnhanceWorkerEvent);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Enhancement failed';
       self.postMessage({ type: 'error', id: data.id, message } satisfies EnhanceWorkerEvent);

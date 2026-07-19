@@ -1,10 +1,12 @@
-/** Open-source high-quality background removal (ModNet, runs locally in browser). */
+/** Background removal via user-selected local model. */
+import { runBgRemoval } from './runBgRemoval';
+
 export async function aiRemoveBackground(
   imageSrc: string,
   targetColor: string = 'transparent',
   onProgress?: (progress: number) => void
 ): Promise<string> {
-  const { hqRemoveBackground } = await import('./hqRemoveBackground');
   const bgColor = targetColor === 'transparent' ? '#ffffff' : targetColor;
-  return hqRemoveBackground(imageSrc, onProgress, bgColor);
+  const result = await runBgRemoval(imageSrc, onProgress, bgColor);
+  return result.url;
 }

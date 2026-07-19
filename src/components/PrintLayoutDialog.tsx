@@ -9,10 +9,11 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronLeft, ChevronRight, Loader2, Printer, RotateCcw, RotateCw, Smartphone, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Printer, RotateCcw, RotateCw, Smartphone, X } from 'lucide-react';
 import { Button } from './ui/Button';
 import { cn } from '../utils/cn';
 import { PrintLayoutControls } from './PrintLayoutControls';
+import { CopiesSelector } from './CopiesSelector';
 import type { PrintGridLimits } from '../utils/computePrintGrid';
 import {
   PRINT_PAPER_SIZES,
@@ -60,6 +61,8 @@ export interface PrintLayoutEditorProps {
   initialLandscape?: boolean;
   sheetPages?: string[];
   isSheetLoading?: boolean;
+  /** Regenerating layout — keep preview visible with overlay instead of full spinner. */
+  isSheetRefreshing?: boolean;
   sheetLabel?: string;
   sheetCols?: number;
   sheetRows?: number;
@@ -79,6 +82,10 @@ export interface PrintLayoutEditorProps {
     photoHeightMm: number;
     landscape: boolean;
     onLandscapeChange: (landscape: boolean) => void;
+  };
+  copyControls?: {
+    value: number;
+    onChange: (value: number) => void;
   };
 }
 
@@ -104,6 +111,7 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
       initialLandscape = false,
       sheetPages = [],
       isSheetLoading = false,
+      isSheetRefreshing = false,
       sheetLabel,
       sheetCols = 0,
       sheetRows = 0,
@@ -112,6 +120,7 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
       sheetPageWidthMm,
       sheetPageHeightMm,
       sheetControls,
+      copyControls,
     },
     ref
   ) {
@@ -132,6 +141,7 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
     const [bleedMm, setBleedMm] = useState(LAYOUT_DEFAULT_BLEED);
     const [previewPageIndex, setPreviewPageIndex] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     const dragRef = useRef<{
       pointerId: number;
@@ -337,27 +347,13 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
     const controlsPanel = (
       <div className="print-layout-dialog-controls w-full lg:w-[340px] xl:w-[380px] shrink-0 border-b lg:border-b-0 lg:border-r border-[#e8dcc8]/10 overflow-y-auto p-4 sm:p-5 space-y-5 max-h-[420px] lg:max-h-none">
         {sheetControls && (
-          <PrintLayoutControls embedded {...sheetControls} />
+          <PrintLayoutControls embedded variant="paper-only" {...sheetControls} />
         )}
 
-        {sheetControls && (
-          <div className="border-t border-[#e8dcc8]/10 pt-5 space-y-1">
-            <p className="text-xs font-semibold text-snapid-text">Print placement</p>
-            <p className="text-[11px] text-snapid-muted">Position on page before printing</p>
+        {copyControls && (
+          <div className="border-t border-[#e8dcc8]/10 pt-5">
+            <CopiesSelector value={copyControls.value} onChange={copyControls.onChange} />
           </div>
-        )}
-
-        {showPaper && !sheetControls && (
-          <>
-            <PaperSizePicker
-              paperId={paperId}
-              onPaperChange={isControlledPaper ? () => {} : setInternalPaperId}
-            />
-            <OrientationPicker
-              landscape={landscape}
-              onLandscapeChange={isControlledPaper ? () => {} : setInternalLandscape}
-            />
-          </>
         )}
 
         {hasSheet && (
@@ -367,128 +363,176 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
             </p>
             <p className="text-[11px] text-snapid-muted">
               {totalPages || sheetPages.length} page{(totalPages || sheetPages.length) !== 1 ? 's' : ''}
-              {totalCopies > 0 ? ` · ${totalCopies} photo${totalCopies !== 1 ? 's' : ''}` : ''}
+              {(copyControls?.value ?? totalCopies) > 0
+                ? ` · ${copyControls?.value ?? totalCopies} photo${(copyControls?.value ?? totalCopies) !== 1 ? 's' : ''}`
+                : ''}
+              {isSheetRefreshing && (
+                <span className="text-brand-400"> · updating…</span>
+              )}
             </p>
           </div>
         )}
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-snapid-text">Scale on page</span>
-            <span className="font-mono text-snapid-muted">{layout.scalePercent}%</span>
-          </div>
-          <input
-            ref={scaleInputRef}
-            type="range"
-            min={LAYOUT_SCALE_MIN}
-            max={LAYOUT_SCALE_MAX}
-            step={1}
-            value={layout.scalePercent}
-            onChange={(event) =>
-              setLayout((prev) => ({ ...prev, scalePercent: Number(event.target.value) }))
-            }
-            className="w-full"
-            aria-label="Scale on page"
-          />
-          <p className="text-[11px] text-snapid-muted">{scaleHint}</p>
-        </div>
+        <div className="border-t border-[#e8dcc8]/10 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((open) => !open)}
+            aria-expanded={showAdvanced}
+            className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left bg-snapid-bg-elevated/60 border border-[#e8dcc8]/10 hover:border-brand-400/25 transition-colors"
+          >
+            <span className="text-sm font-semibold text-snapid-text">Advanced</span>
+            <ChevronDown
+              className={cn(
+                'w-4 h-4 text-snapid-muted shrink-0 transition-transform duration-200',
+                showAdvanced && 'rotate-180'
+              )}
+              aria-hidden
+            />
+          </button>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-snapid-text">Rotation</span>
-            <span className="font-mono text-snapid-muted">{layout.rotationDeg}°</span>
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => rotateBy(-90)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-snapid-bg-elevated border border-[#e8dcc8]/10 text-xs font-semibold text-snapid-text hover:border-brand-400/25 transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              −90°
-            </button>
-            <button
-              type="button"
-              onClick={() => rotateBy(90)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-snapid-bg-elevated border border-[#e8dcc8]/10 text-xs font-semibold text-snapid-text hover:border-brand-400/25 transition-colors"
-            >
-              +90°
-              <RotateCw className="w-4 h-4" />
-            </button>
-          </div>
-          {/* <input
-            ref={rotationInputRef}
-            type="range"
-            min={LAYOUT_ROTATION_MIN}
-            max={LAYOUT_ROTATION_MAX}
-            step={1}
-            value={layout.rotationDeg}
-            onChange={(event) =>
-              setLayout((prev) => ({ ...prev, rotationDeg: Number(event.target.value) }))
-            }
-            className="w-full"
-            aria-label="Rotation"
-          /> */}
-        </div>
+          {showAdvanced && (
+            <div className="mt-4 space-y-5">
+              {sheetControls && (
+                <PrintLayoutControls embedded variant="grid-only" {...sheetControls} />
+              )}
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-snapid-text">Bleed margin</span>
-            <span className="font-mono text-snapid-muted">{bleedMm} mm</span>
-          </div>
-          <input
-            ref={bleedInputRef}
-            type="range"
-            min={LAYOUT_BLEED_MIN}
-            max={LAYOUT_BLEED_MAX}
-            step={0.5}
-            value={bleedMm}
-            onChange={(event) => setBleedMm(Number(event.target.value))}
-            className="w-full"
-            aria-label="Bleed margin"
-          />
-          <p className="text-[11px] text-snapid-muted">Preview guide only — not included in print</p>
-        </div>
+              {/* {sheetControls && (
+                <div className="space-y-1 border-t border-[#e8dcc8]/10 pt-4">
+                  <p className="text-xs font-semibold text-snapid-text">Print placement</p>
+                  <p className="text-[11px] text-snapid-muted">Position on page before printing</p>
+                </div>
+              )} */}
 
-        <Button
-          variant="secondary"
-          size="md"
-          fullWidth
-          onClick={resetLayout}
-          icon={<RotateCcw className="w-4 h-4" />}
-        >
-          Reset layout
-        </Button>
+              {/* {showPaper && !sheetControls && (
+                <>
+                  <PaperSizePicker
+                    paperId={paperId}
+                    onPaperChange={isControlledPaper ? () => { } : setInternalPaperId}
+                  />
+                  <OrientationPicker
+                    landscape={landscape}
+                    onLandscapeChange={isControlledPaper ? () => { } : setInternalLandscape}
+                  />
+                </>
+              )} */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-snapid-text">Rotation</span>
+                  <span className="font-mono text-snapid-muted">{layout.rotationDeg}°</span>
+                </div>
+   
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-snapid-text">Scale on page</span>
+                  <span className="font-mono text-snapid-muted">{layout.scalePercent}%</span>
+                </div>
+                <input
+                  ref={scaleInputRef}
+                  type="range"
+                  min={LAYOUT_SCALE_MIN}
+                  max={LAYOUT_SCALE_MAX}
+                  step={1}
+                  value={layout.scalePercent}
+                  onChange={(event) =>
+                    setLayout((prev) => ({ ...prev, scalePercent: Number(event.target.value) }))
+                  }
+                  className="w-full"
+                  aria-label="Scale on page"
+                />
+                <p className="text-[11px] text-snapid-muted">{scaleHint}</p>
+              </div>
+
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-snapid-text">Bleed margin</span>
+                  <span className="font-mono text-snapid-muted">{bleedMm} mm</span>
+                </div>
+                <input
+                  ref={bleedInputRef}
+                  type="range"
+                  min={LAYOUT_BLEED_MIN}
+                  max={LAYOUT_BLEED_MAX}
+                  step={0.5}
+                  value={bleedMm}
+                  onChange={(event) => setBleedMm(Number(event.target.value))}
+                  className="w-full"
+                  aria-label="Bleed margin"
+                />
+                <p className="text-[11px] text-snapid-muted">Preview guide only — not included in print</p>
+              </div>
+             <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => rotateBy(-90)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-snapid-bg-elevated border border-[#e8dcc8]/10 text-xs font-semibold text-snapid-text hover:border-brand-400/25 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    −90°
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => rotateBy(90)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-snapid-bg-elevated border border-[#e8dcc8]/10 text-xs font-semibold text-snapid-text hover:border-brand-400/25 transition-colors"
+                  >
+                    +90°
+                    <RotateCw className="w-4 h-4" />
+                  </button>
+                </div>
+              <Button
+                variant="secondary"
+                size="md"
+                fullWidth
+                onClick={resetLayout}
+                icon={<RotateCcw className="w-4 h-4" />}
+              >
+                Reset layout
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     );
 
     const previewPanel = (
-      <div className="flex-1 min-h-0 flex flex-col min-h-[320px] lg:min-h-[400px]">
+      <div className="relative flex-1 min-h-0 flex flex-col min-h-[320px] lg:min-h-[400px]">
         {isSheetLoading ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-white">
             <Loader2 className="w-10 h-10 text-brand-500 animate-spin" />
             <p className="text-sm text-snapid-muted">Generating printable sheet…</p>
           </div>
         ) : (
-          <PrintWorkspace
-            paperLabel={paper.label}
-            pageWidthMm={page.widthMm}
-            pageHeightMm={page.heightMm}
-            landscape={landscape}
-            previewScale={previewScale}
-            pageStyle={pageStyle}
-            bleedStyle={bleedStyle}
-            contentStyle={contentStyle}
-            contentSrc={previewContentSrc}
-            isDragging={isDragging}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
-            pageCount={hasSheet ? sheetPages.length : 1}
-            previewPageIndex={previewPageIndex}
-            onPreviewPageChange={setPreviewPageIndex}
-          />
+          <>
+            <PrintWorkspace
+              paperLabel={paper.label}
+              pageWidthMm={page.widthMm}
+              pageHeightMm={page.heightMm}
+              landscape={landscape}
+              previewScale={previewScale}
+              pageStyle={pageStyle}
+              bleedStyle={bleedStyle}
+              contentStyle={contentStyle}
+              contentSrc={previewContentSrc}
+              isDragging={isDragging}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              pageCount={hasSheet ? sheetPages.length : 1}
+              previewPageIndex={previewPageIndex}
+              onPreviewPageChange={setPreviewPageIndex}
+            />
+            {isSheetRefreshing && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-snapid-bg/40 backdrop-blur-[1px] pointer-events-none">
+                <div className="flex items-center gap-2 rounded-lg bg-snapid-bg/90 border border-[#e8dcc8]/15 px-3 py-2 shadow-lg">
+                  <Loader2 className="w-4 h-4 text-brand-500 animate-spin" />
+                  <span className="text-xs font-medium text-snapid-text">Updating layout…</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     );

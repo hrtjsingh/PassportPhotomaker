@@ -1,5 +1,5 @@
 import { getBgRemovalConfig, ensureBgRemovalPublicPath } from './bgRemovalConfig';
-import { HQ_BG_MODEL } from '../config/mlModels';
+import { getSelectedBgModel } from './bgRemovalSettings';
 import { areModelsCached, markModelsCached } from './modelCacheCheck';
 import type { WorkerPreloadCommand, WorkerPreloadEvent } from '../workers/modelPreload.worker';
 
@@ -12,9 +12,6 @@ export interface ModelPreloadState {
   progress: number;
   error: string | null;
 }
-
-const STAGES = ['isnet', 'modnet'] as const;
-const STAGE_WEIGHT = 100 / STAGES.length;
 
 let preloadPromise: Promise<void> | null = null;
 let worker: Worker | null = null;
@@ -39,13 +36,13 @@ function setState(partial: Partial<ModelPreloadState>) {
   emit();
 }
 
-function overallProgress(stage: string, stageProgress: number): number {
-  const index = STAGES.indexOf(stage as (typeof STAGES)[number]);
-  if (index === -1) return stageProgress;
-  return Math.min(100, Math.round(index * STAGE_WEIGHT + (stageProgress / 100) * STAGE_WEIGHT));
-}
-
 async function warmupMainThreadModels(): Promise<void> {
+  const model = getSelectedBgModel();
+  if (model.backend !== 'transformers') {
+    setState({ status: 'warming', label: 'Initializing models', progress: 98 });
+    return;
+  }
+
   setState({ status: 'warming', label: 'Initializing models', progress: 98 });
   const { warmupBgRemover } = await import('./hqRemoveBackground');
   await warmupBgRemover();
@@ -58,7 +55,15 @@ async function finishPreload(): Promise<void> {
 }
 
 function runWorkerPreload(resolve: () => void): void {
-  setState({ status: 'loading', stage: 'isnet', label: 'Preparing models', progress: 0, error: null });
+  const model = getSelectedBgModel();
+
+  setState({
+    status: 'loading',
+    stage: model.id,
+    label: `Loading ${model.name}`,
+    progress: 0,
+    error: null,
+  });
 
   worker = new Worker(new URL('../workers/modelPreload.worker.ts', import.meta.url), {
     type: 'module',
@@ -72,7 +77,7 @@ function runWorkerPreload(resolve: () => void): void {
         status: 'loading',
         stage: data.stage,
         label: data.label,
-        progress: overallProgress(data.stage, data.progress),
+        progress: data.progress,
       });
       return;
     }
@@ -107,12 +112,14 @@ function runWorkerPreload(resolve: () => void): void {
 
   void (async () => {
     const resolved = await ensureBgRemovalPublicPath();
-    const { model } = getBgRemovalConfig();
     const command: WorkerPreloadCommand = {
       type: 'start',
       publicPath: resolved,
-      imglyModel: model,
-      modnetModel: HQ_BG_MODEL,
+      backend: model.backend,
+      modelId: model.modelId,
+      modelConfigId: model.id,
+      stage: model.id,
+      label: `Loading ${model.name}`,
     };
     worker?.postMessage(command);
   })();
@@ -156,6 +163,14 @@ export function startModelPreload(): Promise<void> {
   return preloadPromise;
 }
 
+export function restartModelPreload(): Promise<void> {
+  worker?.terminate();
+  worker = null;
+  preloadPromise = null;
+  setState({ status: 'idle', stage: null, label: null, progress: 0, error: null });
+  return startModelPreload();
+}
+
 export function waitForModelPreload(): Promise<void> {
-  return preloadPromise ?? Promise.resolve();
+  return preloadPromise ?? startModelPreload();
 }

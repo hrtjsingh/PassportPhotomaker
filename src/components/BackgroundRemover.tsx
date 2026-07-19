@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, Loader2, Zap, CheckCircle2, RotateCcw } from 'lucide-react';
-import { removeBackground } from '../utils/removeBackground';
-import { aiRemoveBackground } from '../utils/aiRemoveBackground';
+import { Loader2, Zap, CheckCircle2, RotateCcw, Settings2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { runBgRemoval } from '../utils/runBgRemoval';
+import { useBgRemovalSettings } from '../hooks/useBgRemovalSettings';
 import { Button } from './ui/Button';
 
 interface BackgroundRemoverProps {
@@ -19,40 +20,30 @@ export const BackgroundRemover: React.FC<BackgroundRemoverProps> = ({
   onComplete,
   onUndo,
 }) => {
+  const { selectedModel } = useBgRemovalSettings();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-
-  const busy = isProcessing || isAiProcessing;
+  const [fallbackNote, setFallbackNote] = useState<string | null>(null);
 
   const handleRemoveBackground = async () => {
     setIsProcessing(true);
     setProgress(0);
+    setFallbackNote(null);
     try {
-      const result = await removeBackground(image, (p) => setProgress(p), selectedColor);
-      onComplete(result);
+      const result = await runBgRemoval(image, (p) => setProgress(p), selectedColor);
+      if (result.usedFallback) {
+        setFallbackNote(
+          `${result.usedFallback.from} ran out of memory — completed with ${result.usedFallback.to} instead.`
+        );
+      }
+      onComplete(result.url);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to remove background. Please try again.';
-      alert(message);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleAiRemoveBackground = async () => {
-    setIsAiProcessing(true);
-    setProgress(0);
-    try {
-      const result = await aiRemoveBackground(image, selectedColor, (p) => setProgress(p));
-      onComplete(result);
-    } catch (error) {
-      console.error('HQ background removal failed:', error);
+      console.error('Background removal failed:', error);
       const message =
         error instanceof Error ? error.message : 'Background removal failed. Please try again.';
       alert(message);
     } finally {
-      setIsAiProcessing(false);
+      setIsProcessing(false);
     }
   };
 
@@ -72,14 +63,21 @@ export const BackgroundRemover: React.FC<BackgroundRemoverProps> = ({
 
         <img src={resultImage || image} alt="To process" className="w-full h-full object-cover" />
 
-        {resultImage && !busy && (
-          <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 px-3 py-2.5 rounded-lg bg-brand-600/95 backdrop-blur-md text-white text-xs font-semibold shadow-lg">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            Background removed — pick a color and continue
+        {resultImage && !isProcessing && (
+          <div className="absolute bottom-3 left-3 right-3 flex flex-col gap-2">
+            {fallbackNote && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-600/95 backdrop-blur-md text-white text-xs font-semibold shadow-lg">
+                {fallbackNote}
+              </div>
+            )}
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-brand-600/95 backdrop-blur-md text-white text-xs font-semibold shadow-lg">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              Background removed — pick a color and continue
+            </div>
           </div>
         )}
 
-        {busy && (
+        {isProcessing && (
           <div className="absolute inset-0 bg-snapid-bg/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-6">
             <div className="relative flex items-center justify-center">
               <Loader2 className="w-11 h-11 text-snapid-text animate-spin" />
@@ -94,51 +92,47 @@ export const BackgroundRemover: React.FC<BackgroundRemoverProps> = ({
               />
             </div>
             <p className="text-sm font-semibold text-snapid-text text-center">
-              {isAiProcessing ? 'Running ModNet…' : 'Removing background…'}
+              Running {selectedModel.name}…
             </p>
           </div>
         )}
       </div>
 
       <div className="flex flex-col gap-2.5 w-full">
-        {resultImage && onUndo && (
+        {resultImage && onUndo ? (
           <Button
             variant="secondary"
             size="lg"
             fullWidth
-            disabled={busy}
+            disabled={isProcessing}
             onClick={onUndo}
             icon={<RotateCcw className="w-4 h-4" />}
           >
             Undo background removal
           </Button>
-        )}
+        ):
 
         <Button
           variant="primary"
           size="lg"
           fullWidth
-          disabled={busy}
-          loading={isAiProcessing}
-          onClick={handleAiRemoveBackground}
-          icon={!isAiProcessing ? <Zap className="w-4 h-4 fill-current" /> : undefined}
-          description={!isAiProcessing ? 'Sharpest edges · removes background halos' : undefined}
-        >
-          {isAiProcessing ? 'Processing…' : 'Remove Background (HQ)'}
-        </Button>
-
-        {/* <Button
-          variant="secondary"
-          size="lg"
-          fullWidth
-          disabled={busy}
+          disabled={isProcessing || resultImage !== null}
           loading={isProcessing}
           onClick={handleRemoveBackground}
-          icon={!isProcessing ? <Sparkles className="w-4 h-4" /> : undefined}
-          description={!isProcessing ? 'Faster preview · lighter model' : undefined}
+          icon={!isProcessing ? <Zap className="w-4 h-4 fill-current" /> : undefined}
+          // description={!isProcessing ? `Using ${selectedModel.name} · ${selectedModel.sizeHint}` : undefined}
         >
-          {isProcessing ? 'Processing…' : 'Fast Removal'}
-        </Button> */}
+          {isProcessing ? 'Processing…' : 'Remove Background'}
+        </Button>
+}
+{/* 
+        <Link
+          to="/settings"
+          className="inline-flex items-center justify-center gap-2 min-h-11 px-5 text-sm font-semibold rounded-xl text-snapid-muted hover:text-brand-300 hover:bg-snapid-bg-elevated/60 transition-colors"
+        >
+          <Settings2 className="w-4 h-4" aria-hidden="true" />
+          Change model
+        </Link> */}
       </div>
 
       <p className="text-xs text-snapid-muted text-center leading-relaxed">
