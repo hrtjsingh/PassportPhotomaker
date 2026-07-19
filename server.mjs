@@ -3,10 +3,14 @@
  * Production server: static dist + COOP/COEP + imgly asset proxy.
  * Usage: npm run build && npm start
  */
+import dotenv from 'dotenv';
 import express from 'express';
 import fs from 'fs';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -14,6 +18,7 @@ const DIST = path.join(ROOT, 'dist');
 const LOCAL_ASSETS = path.join(DIST, 'bg-removal-assets');
 const IMGLY_CDN = 'https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist';
 const PORT = Number(process.env.PORT) || 4173;
+const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://localhost:3001';
 
 if (!fs.existsSync(path.join(DIST, 'index.html'))) {
   console.error('Missing dist/index.html — run npm run build first.');
@@ -21,6 +26,35 @@ if (!fs.existsSync(path.join(DIST, 'index.html'))) {
 }
 
 const app = express();
+
+/** Proxy ML inference API to Node backend (streams multipart uploads). */
+app.use('/api', (req, res) => {
+  const target = new URL(req.originalUrl, ML_BACKEND_URL);
+  const headers = { ...req.headers, host: target.host };
+
+  const proxyReq = http.request(
+    {
+      hostname: target.hostname,
+      port: target.port || (target.protocol === 'https:' ? 443 : 80),
+      path: target.pathname + target.search,
+      method: req.method,
+      headers,
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    }
+  );
+
+  proxyReq.on('error', (err) => {
+    console.error('ML API proxy error:', err);
+    if (!res.headersSent) {
+      res.status(502).json({ error: 'ML backend unavailable' });
+    }
+  });
+
+  req.pipe(proxyReq);
+});
 
 app.use((_req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');

@@ -5,15 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:all": "npm run dev:backend & npm run dev",
     "prebuild": "node scripts/prebuild.mjs",
     "build": "vite build",
+    "build:backend": "npm run build --prefix backend",
     "preview": "vite preview",
     "start": "node server.mjs",
+    "start:backend": "npm run start --prefix backend",
+    "start:all": "npm run start:backend & npm run start",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "setup:bg-removal": "node scripts/setup-bg-removal.mjs"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.9",
     "@google/genai": "^1.44.0",
     "@huggingface/transformers": "^4.2.0",
     "@imgly/background-removal": "^1.7.0",

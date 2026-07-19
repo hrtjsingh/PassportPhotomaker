@@ -1,3 +1,4 @@
+import { canUseMlBackend } from './mlAuth';
 import { getBgRemovalConfig, ensureBgRemovalPublicPath } from './bgRemovalConfig';
 import { getSelectedBgModel } from './bgRemovalSettings';
 import { areModelsCached, markModelsCached } from './modelCacheCheck';
@@ -135,12 +136,36 @@ export function subscribeModelPreload(listener: (state: ModelPreloadState) => vo
   return () => listeners.delete(listener);
 }
 
+async function warmupBackendModels(): Promise<void> {
+  setState({ status: 'loading', label: 'Connecting to ML backend', progress: 10 });
+  const { checkMlBackendHealth } = await import('./mlApiClient');
+  const ok = await checkMlBackendHealth();
+  if (!ok) {
+    throw new Error('ML backend unavailable. Start it with: npm run dev:backend');
+  }
+  setState({ status: 'warming', label: 'Backend models loading', progress: 80 });
+}
+
 export function startModelPreload(): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve();
   if (state.status === 'ready') return Promise.resolve();
   if (preloadPromise) return preloadPromise;
 
   preloadPromise = new Promise<void>((resolve) => {
+    if (canUseMlBackend()) {
+      warmupBackendModels()
+        .then(async () => {
+          markModelsCached();
+          setState({ status: 'ready', stage: null, label: null, progress: 100, error: null });
+          resolve();
+        })
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : 'Backend warmup failed';
+          setState({ status: 'error', error: message, progress: 0 });
+          resolve();
+        });
+      return;
+    }
     areModelsCached()
       .then(async (cached) => {
         if (cached) {

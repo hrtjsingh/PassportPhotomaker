@@ -79,6 +79,10 @@ export default defineConfig(({mode}) => {
       },
       // Same-origin proxy avoids CDN fetch failures (ad blockers, CORP, offline)
       proxy: {
+        '/api': {
+          target: process.env.ML_BACKEND_URL || 'http://localhost:3001',
+          changeOrigin: true,
+        },
         '/bg-removal-assets': {
           target: `https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist`,
           changeOrigin: true,
@@ -97,6 +101,10 @@ export default defineConfig(({mode}) => {
         'Cross-Origin-Embedder-Policy': 'require-corp',
       },
       proxy: {
+        '/api': {
+          target: process.env.ML_BACKEND_URL || 'http://localhost:3001',
+          changeOrigin: true,
+        },
         '/bg-removal-assets': {
           target: `https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist`,
           changeOrigin: true,

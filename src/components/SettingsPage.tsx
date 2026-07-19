@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
 import { ArrowLeft, Sparkles, Gauge, HardDrive, CheckCircle2 } from 'lucide-react';
 import { PageBackground } from './PageBackground';
 import { BrandLogo } from './BrandLogo';
@@ -7,6 +8,9 @@ import { ModelPreloadIndicator } from './ModelPreloadIndicator';
 import { Button } from './ui/Button';
 import { useBgRemovalSettings } from '../hooks/useBgRemovalSettings';
 import { BG_REMOVAL_MODELS, getBgRemovalModelById } from '../config/bgRemovalModels';
+import { USE_ML_BACKEND } from '../config/backend';
+import { isClerkEnabled } from '../config/clerk';
+import { AuthControls } from './AuthControls';
 import { BRAND_NAME } from '../config/brand';
 import { cn } from '../utils/cn';
 
@@ -20,7 +24,7 @@ function setPageMeta() {
   document.title = `Settings — ${BRAND_NAME}`;
 }
 
-export default function SettingsPage() {
+function SettingsPageContent({ isSignedIn }: { isSignedIn: boolean }) {
   const { selectedModel, saveModel } = useBgRemovalSettings();
   const [draftModelId, setDraftModelId] = useState(selectedModel.id);
   const [saved, setSaved] = useState(false);
@@ -32,6 +36,11 @@ export default function SettingsPage() {
   useEffect(() => {
     setDraftModelId(selectedModel.id);
   }, [selectedModel.id]);
+
+  const useBackendMl = USE_ML_BACKEND && isClerkEnabled && Boolean(isSignedIn);
+  const availableModels = useBackendMl
+    ? BG_REMOVAL_MODELS.filter((model) => model.backend === 'transformers')
+    : BG_REMOVAL_MODELS;
 
   const draftModel = getBgRemovalModelById(draftModelId);
   const hasChanges = draftModelId !== selectedModel.id;
@@ -53,13 +62,16 @@ export default function SettingsPage() {
           <Link to="/studio" className="group shrink-0">
             <BrandLogo size="md" />
           </Link>
-          <Link
-            to="/studio"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-snapid-muted hover:text-brand-300 hover:bg-snapid-bg-elevated/60 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-            Back to Studio
-          </Link>
+          <div className="flex items-center gap-2">
+            <AuthControls />
+            <Link
+              to="/studio"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-snapid-muted hover:text-brand-300 hover:bg-snapid-bg-elevated/60 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              Back to Studio
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -69,7 +81,11 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="text-sm sm:text-base text-snapid-muted leading-relaxed">
-            Choose which local AI model removes backgrounds. Models run in your browser — nothing is uploaded.
+            {useBackendMl
+              ? 'Signed in — cloud backend handles background removal. Pick the server model below.'
+              : isClerkEnabled
+                ? 'Not signed in — models run locally in your browser. Sign in to use the cloud backend.'
+                : 'Choose which local AI model removes backgrounds. Models run in your browser — nothing is uploaded.'}
           </p>
         </div>
 
@@ -92,7 +108,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-2.5">
-            {BG_REMOVAL_MODELS.map((model) => {
+            {availableModels.map((model) => {
               const selected = draftModelId === model.id;
               return (
                 <button
@@ -179,10 +195,22 @@ export default function SettingsPage() {
           </div>
 
           <p className="text-xs text-snapid-muted leading-relaxed">
-            Model downloads only after you save. Weights cache on this device. Models marked High RAM need 4GB+ free memory — use ModNet on older devices.
+            {useBackendMl
+              ? 'Model choice applies on the next cloud request. Backend loads weights on first use.'
+              : 'Model downloads only after you save. Weights cache on this device. Models marked High RAM need 4GB+ free memory — use ModNet on older devices.'}
           </p>
         </section>
       </main>
     </div>
   );
+}
+
+function SettingsPageAuthed() {
+  const { isSignedIn } = useAuth();
+  return <SettingsPageContent isSignedIn={Boolean(isSignedIn)} />;
+}
+
+export default function SettingsPage() {
+  if (isClerkEnabled) return <SettingsPageAuthed />;
+  return <SettingsPageContent isSignedIn={false} />;
 }

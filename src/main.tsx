@@ -1,11 +1,14 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ClerkProvider } from '@clerk/clerk-react';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App.tsx';
 import './index.css';
 import { injectJsonLd } from './hooks/usePageSEO';
 import { initDarkTheme } from './config/theme';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
+import { ClerkAuthBridge } from './components/ClerkAuthBridge';
+import { CLERK_PUBLISHABLE_KEY, isClerkEnabled } from './config/clerk';
 
 initDarkTheme();
 
@@ -47,7 +50,15 @@ function Root() {
           You&apos;re offline — cached pages work; AI models need a prior visit or connection.
         </div>
       )}
-      <App />
+      {isClerkEnabled ? (
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
+          <ClerkAuthBridge>
+            <App />
+          </ClerkAuthBridge>
+        </ClerkProvider>
+      ) : (
+        <App />
+      )}
     </StrictMode>
   );
 }

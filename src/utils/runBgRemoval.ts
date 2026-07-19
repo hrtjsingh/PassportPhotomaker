@@ -1,4 +1,5 @@
-/** Route background removal to the user-selected local model. */
+/** Route background removal to backend API (signed in) or local model. */
+import { canUseMlBackend } from './mlAuth';
 import {
   getBgRemovalModelById,
   OOM_FALLBACK_MODEL_ID,
@@ -65,6 +66,11 @@ export async function runBgRemoval(
   onProgress?: (progress: number) => void,
   backgroundColor = '#ffffff'
 ): Promise<BgRemovalRunResult> {
+  if (canUseMlBackend()) {
+    const { removeBackgroundViaApi } = await import('./mlApiClient');
+    return removeBackgroundViaApi(imageSrc, onProgress, backgroundColor);
+  }
+
   const model = getSelectedBgModel();
 
   try {

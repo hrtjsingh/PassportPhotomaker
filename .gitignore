@@ -6,5 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+!backend/.env.example
 .cache/
 public/bg-removal-assets/

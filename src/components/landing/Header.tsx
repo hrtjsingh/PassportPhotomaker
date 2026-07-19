@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import { BRAND_NAME } from '../../config/brand';
 import { BrandLogo } from '../BrandLogo';
+import { AuthControls } from '../AuthControls';
 import { cn } from '../../utils/cn';
 import { NAV_LINKS } from './constants';
 
@@ -84,6 +85,7 @@ export const Header = () => {
           </nav>
 
           <div className="flex items-center gap-4">
+            <AuthControls />
             <a href="/studio" className="hidden sm:inline-flex btn-primary text-sm px-5 py-2.5">
               Start Free
               <ArrowRight className="w-4 h-4" aria-hidden="true" />

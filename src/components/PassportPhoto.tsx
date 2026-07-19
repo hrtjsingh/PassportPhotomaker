@@ -37,6 +37,7 @@ import { STUDIO_STEPS } from '../config/studioSteps';
 import { StepFooter } from './StepFooter';
 import { Button } from './ui/Button';
 import { BrandLogo } from './BrandLogo';
+import { AuthControls } from './AuthControls';
 import { BRAND_TAGLINE, BRAND_DESCRIPTION } from '../config/brand';
 import { usePageSEO } from '../hooks/usePageSEO';
 import { Link } from 'react-router-dom';
@@ -470,6 +471,7 @@ export default function PassportPhoto() {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            <AuthControls showModeBadge={false} />
             {/* <Link
               to="/settings"
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-snapid-muted hover:text-brand-300 hover:bg-snapid-bg-elevated/60 transition-colors touch-target"
