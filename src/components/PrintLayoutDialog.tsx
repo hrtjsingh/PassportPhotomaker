@@ -701,8 +701,8 @@ function PrintWorkspace({
   const scaledH = pageHeightMm * CSS_MM_TO_PX * previewScale;
 
   return (
-    <div className="flex flex-1 flex-col bg-white min-h-0">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[#e8dcc8]/15 shrink-0">
+    <div className="flex flex-1 flex-col bg-[#1b1e1f] min-h-0">
+      <div className="flex items-center justify-between gap-2 bg-[#1d1b17] px-3 py-2 border-b border-[#e8dcc8]/15 shrink-0">
         <p className="text-[11px] font-mono text-snapid-muted truncate">
           {paperLabel} · {pageWidthMm.toFixed(1)}×{pageHeightMm.toFixed(1)} mm ·{' '}
           {landscape ? 'landscape' : 'portrait'}
@@ -735,7 +735,7 @@ function PrintWorkspace({
       </div>
 
       <div className="flex-1 overflow-auto min-h-0">
-        <div className="relative shrink-0 mx-auto" style={{ width: scaledW, height: scaledH }}>
+        <div className="relative shrink-0 mx-auto bg-white" style={{ width: scaledW, height: scaledH }}>
           <div
             className="print-layout-preview-scale absolute top-0 left-0 origin-top-left"
             style={{ transform: `scale(${previewScale})` }}
@@ -756,7 +756,7 @@ function PrintWorkspace({
         </div>
       </div>
 
-      <p className="text-[11px] text-snapid-muted text-center px-3 py-2 border-t border-[#e8dcc8]/15 shrink-0 print-layout-dialog-controls">
+      <p className="text-[11px] bg-[#1d1b17] text-snapid-muted text-center px-3 py-2 border-t border-[#e8dcc8]/15 shrink-0 print-layout-dialog-controls">
         Drag · scale · rotate · dashed line = bleed safe area · preview = print
       </p>
     </div>
@@ -804,7 +804,7 @@ function PrintPageCanvas({
       className={cn(
         'print-layout-page relative overflow-hidden',
         pageBreak && 'print-layout-page-break',
-        previewChrome && 'border border-[#e8dcc8]/25'
+        previewChrome && 'border border-[#000000]/25'
       )}
       style={pageStyle}
     >
