@@ -1,6 +1,13 @@
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
 import { getBgRemovalConfig, ensureBgRemovalPublicPath } from './bgRemovalConfig';
 import { waitForModelPreload } from './modelPreload';
+import { getSelectedBgModel } from './bgRemovalSettings';
+import {
+  getImageDimensions,
+  isBgRemovalOomError,
+  limitImageSizeForInference,
+  upscaleImageBlob,
+} from './bgRemovalInput';
 import {
   addImagePadding,
   cropPaddingFromResult,
@@ -15,17 +22,28 @@ async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
 export async function removeBackground(
   imageSrc: string,
   onProgress?: (progress: number) => void,
-  _backgroundColor = '#ffffff'
+  _backgroundColor = '#ffffff',
+  maxInputPx?: number
 ): Promise<string> {
+  const selected = getSelectedBgModel();
+  if (selected.backend !== 'imgly') {
+    throw new Error('Selected background model is not an imgly model.');
+  }
+
+  const imglyModel = selected.modelId as 'isnet' | 'isnet_fp16' | 'isnet_quint8';
+
   try {
     await waitForModelPreload();
     await ensureBgRemovalPublicPath();
-    const { paddedSrc, padding } = await addImagePadding(imageSrc, 0.1);
+    const originalSize = await getImageDimensions(imageSrc);
+    const inputLimit = maxInputPx ?? selected.maxInputPx ?? 2048;
+    const { src: inferenceSrc, scale } = await limitImageSizeForInference(imageSrc, inputLimit);
+    const { paddedSrc, padding } = await addImagePadding(inferenceSrc, 0.1);
     const paddedBlob = await dataUrlToBlob(paddedSrc);
 
     const blob = await imglyRemoveBackground(paddedBlob, {
-      ...getBgRemovalConfig(),
-      progress: (key, current, total) => {
+      ...getBgRemovalConfig(imglyModel),
+      progress: (_key, current, total) => {
         if (onProgress) {
           onProgress(Math.round((current / total) * 100));
         }
@@ -34,7 +52,15 @@ export async function removeBackground(
 
     const paddedResultUrl = URL.createObjectURL(blob);
     try {
-      const croppedBlob = await cropPaddingFromResult(paddedResultUrl, padding);
+      let croppedBlob = await cropPaddingFromResult(paddedResultUrl, padding);
+      if (scale < 1) {
+        croppedBlob = await upscaleImageBlob(
+          croppedBlob,
+          originalSize.width,
+          originalSize.height
+        );
+      }
+
       const croppedUrl = URL.createObjectURL(croppedBlob);
 
       try {
@@ -44,7 +70,6 @@ export async function removeBackground(
         URL.revokeObjectURL(croppedUrl);
         return URL.createObjectURL(refinedBlob);
       } catch {
-        // Fall back to cropped result if refinement fails
         return croppedUrl;
       }
     } finally {
@@ -52,6 +77,9 @@ export async function removeBackground(
     }
   } catch (error) {
     console.error('Background removal failed:', error);
+    if (isBgRemovalOomError(error)) {
+      throw error;
+    }
     const message =
       error instanceof TypeError &&
       (String(error.message).includes('fetch') ||

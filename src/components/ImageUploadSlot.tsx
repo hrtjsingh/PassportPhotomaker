@@ -55,7 +55,7 @@ export const ImageUploadSlot: React.FC<ImageUploadSlotProps> = ({
 
       const options: CompressionOptions = {
         maxSizeMB: 10,
-        maxWidthOrHeight: 3000,
+        maxWidthOrHeight: 1600,
         useWebWorker: true,
         onProgress: (p: number) => setProgress(p),
       };

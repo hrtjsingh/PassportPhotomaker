@@ -19,6 +19,8 @@ interface PrintLayoutControlsProps {
   onLandscapeChange: (landscape: boolean) => void;
   /** Strip card chrome — for embedding in print preview sidebar. */
   embedded?: boolean;
+  /** full = all controls; paper-only / grid-only for basic vs advanced split */
+  variant?: 'full' | 'paper-only' | 'grid-only';
 }
 
 function GridStepper({
@@ -90,11 +92,14 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
   landscape,
   onLandscapeChange,
   embedded = false,
+  variant = 'full',
 }) => {
   const photosPerPage = cols * rows;
   const selectedSheet = SHEET_SIZES.find((s) => s.id === sheetId) ?? SHEET_SIZES[0];
+  const showPaper = variant === 'full' || variant === 'paper-only';
+  const showGrid = variant === 'full' || variant === 'grid-only';
 
-  const content = (
+  const paperSection = showPaper ? (
     <>
       {!embedded && (
         <div className="flex items-center gap-2">
@@ -168,48 +173,57 @@ export const PrintLayoutControls: React.FC<PrintLayoutControlsProps> = ({
           </div>
         </div>
       )}
+    </>
+  ) : null;
 
-      <div className="space-y-3 pt-1 border-t border-[#e8dcc8]/10">
-        <div className="flex items-center gap-2">
-          <LayoutGrid className="w-4 h-4 text-brand-300" />
-          <p className="text-xs font-medium text-snapid-text">Grid on {selectedSheet.label}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <GridStepper
-            label="Columns"
-            value={cols}
-            min={1}
-            max={gridLimits.maxCols}
-            onChange={onColsChange}
-          />
-          <GridStepper
-            label="Rows"
-            value={rows}
-            min={1}
-            max={gridLimits.maxRows}
-            onChange={onRowsChange}
-          />
-        </div>
-        <p className="text-xs text-snapid-muted">
-          {photosPerPage} photo{photosPerPage !== 1 ? 's' : ''} per page
-          {photosPerPage < gridLimits.photosPerPage && (
-            <span> · max fit {gridLimits.maxCols}×{gridLimits.maxRows}</span>
-          )}
-        </p>
-        <p className="text-[11px] text-snapid-muted font-mono">
-          Each photo locked at {photoWidthMm}×{photoHeightMm} mm — grid changes count only
-        </p>
-        {selectedSheet.portraitOnly && selectedSheet.rotatePhotosOnSheet && (
-          <p className="text-[11px] text-snapid-muted">
-            Portrait 4×6 · photos rotated 90° · grid centered · 8 per page at true print size.
-          </p>
-        )}
-        {selectedSheet.portraitOnly && !selectedSheet.rotatePhotosOnSheet && (
-          <p className="text-[11px] text-snapid-muted">
-            Portrait only — layout stays inside sheet edges so nothing is clipped when printing.
-          </p>
-        )}
+  const gridSection = showGrid ? (
+    <div className={cn('space-y-3', showPaper && 'pt-1 border-t border-[#e8dcc8]/10')}>
+      <div className="flex items-center gap-2">
+        <LayoutGrid className="w-4 h-4 text-brand-300" />
+        <p className="text-xs font-medium text-snapid-text">Grid on {selectedSheet.label}</p>
       </div>
+      <div className="grid grid-cols-2 gap-4">
+        <GridStepper
+          label="Columns"
+          value={cols}
+          min={1}
+          max={gridLimits.maxCols}
+          onChange={onColsChange}
+        />
+        <GridStepper
+          label="Rows"
+          value={rows}
+          min={1}
+          max={gridLimits.maxRows}
+          onChange={onRowsChange}
+        />
+      </div>
+      <p className="text-xs text-snapid-muted">
+        {photosPerPage} photo{photosPerPage !== 1 ? 's' : ''} per page
+        {photosPerPage < gridLimits.photosPerPage && (
+          <span> · max fit {gridLimits.maxCols}×{gridLimits.maxRows}</span>
+        )}
+      </p>
+      {/* <p className="text-[11px] text-snapid-muted font-mono">
+        Each photo locked at {photoWidthMm}×{photoHeightMm} mm — grid changes count only
+      </p>
+      {selectedSheet.portraitOnly && selectedSheet.rotatePhotosOnSheet && (
+        <p className="text-[11px] text-snapid-muted">
+          Portrait 4×6 · photos rotated 90° · grid centered · 8 per page at true print size.
+        </p>
+      )}
+      {selectedSheet.portraitOnly && !selectedSheet.rotatePhotosOnSheet && (
+        <p className="text-[11px] text-snapid-muted">
+          Portrait only — layout stays inside sheet edges so nothing is clipped when printing.
+        </p>
+      )} */}
+    </div>
+  ) : null;
+
+  const content = (
+    <>
+      {paperSection}
+      {gridSection}
     </>
   );
 

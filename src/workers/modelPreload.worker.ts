@@ -1,11 +1,16 @@
 import { preload } from '@imgly/background-removal';
 import { pipeline, env } from '@huggingface/transformers';
+import type { BgRemovalBackend } from '../config/bgRemovalModels';
+import { getTransformersPipelineOptions, getBgRemovalModelById } from '../config/bgRemovalModels';
 
 export type WorkerPreloadCommand = {
   type: 'start';
   publicPath: string;
-  imglyModel: 'isnet_fp16';
-  modnetModel: string;
+  backend: BgRemovalBackend;
+  modelId: string;
+  modelConfigId: string;
+  stage: string;
+  label: string;
 };
 
 export type WorkerPreloadEvent =
@@ -19,31 +24,28 @@ env.useBrowserCache = true;
 self.onmessage = async (event: MessageEvent<WorkerPreloadCommand>) => {
   if (event.data.type !== 'start') return;
 
-  const { publicPath, imglyModel, modnetModel } = event.data;
+  const { publicPath, backend, modelId, modelConfigId, stage, label } = event.data;
 
-  const postProgress = (stage: string, label: string, progress: number, key?: string) => {
+  const postProgress = (progress: number, key?: string) => {
     const payload: WorkerPreloadEvent = { type: 'progress', stage, label, progress, key };
     self.postMessage(payload);
   };
 
   try {
-    postProgress('isnet', 'Fast background removal', 0);
-    await preload({
-      publicPath,
-      model: imglyModel,
-      progress: (key, current, total) => {
-        postProgress('isnet', 'Fast background removal', Math.round((current / total) * 100), key);
-      },
-    });
+    postProgress(0);
 
-    postProgress('modnet', 'Portrait matting', 0);
-    await pipeline('background-removal', modnetModel, {
-      progress_callback: (info: { status: string; progress?: number; file?: string }) => {
-        if (info.status === 'progress' && info.progress != null) {
-          postProgress('modnet', 'Portrait matting', Math.round(info.progress), info.file);
-        }
-      },
-    });
+    if (backend === 'imgly') {
+      await preload({
+        publicPath,
+        model: modelId as 'isnet' | 'isnet_fp16' | 'isnet_quint8',
+        progress: (key, current, total) => {
+          postProgress(Math.round((current / total) * 100), key);
+        },
+      });
+    } else {
+      const model = getBgRemovalModelById(modelConfigId);
+      await pipeline('background-removal', modelId, getTransformersPipelineOptions(model, postProgress));
+    }
 
     self.postMessage({ type: 'complete' } satisfies WorkerPreloadEvent);
   } catch (error) {

@@ -1,12 +1,14 @@
 import { ModelRegistry } from '@huggingface/transformers';
-import { getBgRemovalConfig, ensureBgRemovalPublicPath } from './bgRemovalConfig';
-import { HQ_BG_MODEL, PRELOAD_CACHE_VERSION } from '../config/mlModels';
+import { ensureBgRemovalPublicPath, getBgRemovalPublicPath } from './bgRemovalConfig';
+import { getSelectedBgModel } from './bgRemovalSettings';
+import { PRELOAD_CACHE_VERSION } from '../config/mlModels';
 
 const STORAGE_KEY = 'snapid:models-cache';
 
 interface ModelsCacheRecord {
   version: string;
   savedAt: number;
+  bgModelId: string;
 }
 
 function readCacheRecord(): ModelsCacheRecord | null {
@@ -15,6 +17,7 @@ function readCacheRecord(): ModelsCacheRecord | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ModelsCacheRecord;
     if (parsed.version !== PRELOAD_CACHE_VERSION) return null;
+    if (parsed.bgModelId !== getSelectedBgModel().id) return null;
     return parsed;
   } catch {
     return null;
@@ -25,6 +28,7 @@ export function markModelsCached(): void {
   const record: ModelsCacheRecord = {
     version: PRELOAD_CACHE_VERSION,
     savedAt: Date.now(),
+    bgModelId: getSelectedBgModel().id,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
 }
@@ -42,7 +46,6 @@ async function isFetchCached(url: string): Promise<boolean> {
   }
 }
 
-/** Check imgly ISNet assets via resources.json + sample chunks in HTTP cache. */
 async function isImglyModelCached(publicPath: string, model: string): Promise<boolean> {
   try {
     const resources = await fetch(`${publicPath}resources.json`).then((r) => r.json());
@@ -59,21 +62,18 @@ async function isImglyModelCached(publicPath: string, model: string): Promise<bo
   }
 }
 
-/** True when all models are already in browser storage — skip worker download. */
+/** True when selected model is already in browser storage — skip worker download. */
 export async function areModelsCached(): Promise<boolean> {
   const record = readCacheRecord();
   if (!record) return false;
 
+  const model = getSelectedBgModel();
   await ensureBgRemovalPublicPath();
-  const { publicPath, model } = getBgRemovalConfig();
 
-  const [modnetCached, imglyCached] = await Promise.all([
-    ModelRegistry.is_pipeline_cached('background-removal', HQ_BG_MODEL),
-    isImglyModelCached(publicPath, model),
-  ]);
+  if (model.backend === 'transformers') {
+    return ModelRegistry.is_pipeline_cached('background-removal', model.modelId);
+  }
 
-  if (modnetCached && imglyCached) return true;
-
-  clearModelsCacheRecord();
-  return false;
+  const publicPath = getBgRemovalPublicPath();
+  return isImglyModelCached(publicPath, model.modelId);
 }

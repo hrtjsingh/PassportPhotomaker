@@ -1,14 +1,18 @@
 import { pipeline, env, type RawImage } from '@huggingface/transformers';
+import type { BgRemovalModelOption } from '../config/bgRemovalModels';
+import { getTransformersPipelineOptions } from '../config/bgRemovalModels';
 import {
   addImagePadding,
   cropPaddingFromResult,
   refineAlphaFromOriginal,
 } from './refineAlphaMask';
+import {
+  getImageDimensions,
+  limitImageSizeForInference,
+  upscaleImageBlob,
+} from './bgRemovalInput';
 import { waitForModelPreload } from './modelPreload';
-
-import { HQ_BG_MODEL } from '../config/mlModels';
-
-export { HQ_BG_MODEL };
+import { getSelectedBgModel } from './bgRemovalSettings';
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
@@ -19,30 +23,52 @@ type BackgroundRemover = (
 ) => Promise<RawImage>;
 
 let removerPromise: Promise<BackgroundRemover> | null = null;
+let loadedModelKey: string | null = null;
 let progressHandler: ((progress: number) => void) | undefined;
 
-async function getRemover(onProgress?: (progress: number) => void): Promise<BackgroundRemover> {
+export function resetBgRemoverCache(): void {
+  removerPromise = null;
+  loadedModelKey = null;
+}
+
+async function getRemover(
+  model: BgRemovalModelOption,
+  onProgress?: (progress: number) => void
+): Promise<BackgroundRemover> {
   progressHandler = onProgress;
+
+  if (model.backend !== 'transformers') {
+    throw new Error('Selected background model is not a Transformers.js model.');
+  }
+
+  if (loadedModelKey !== model.id) {
+    removerPromise = null;
+    loadedModelKey = model.id;
+  }
+
   if (!removerPromise) {
     removerPromise = (
-      pipeline('background-removal', HQ_BG_MODEL, {
-        progress_callback: (info: { status: string; progress?: number }) => {
-          if (info.status === 'progress' && info.progress != null) {
-            progressHandler?.(Math.round(info.progress));
-          }
-        },
-      }) as Promise<BackgroundRemover>
+      pipeline(
+        'background-removal',
+        model.modelId,
+        getTransformersPipelineOptions(model, (progress) => {
+          progressHandler?.(progress);
+        })
+      ) as Promise<BackgroundRemover>
     ).catch((err) => {
       removerPromise = null;
+      loadedModelKey = null;
       throw err;
     });
   }
   return removerPromise;
 }
 
-/** Load ModNet into main-thread memory (after worker cache warmup). */
+/** Load selected Transformers.js model into main-thread memory. */
 export function warmupBgRemover(): Promise<void> {
-  return getRemover().then(() => undefined);
+  const model = getSelectedBgModel();
+  if (model.backend !== 'transformers') return Promise.resolve();
+  return getRemover(model).then(() => undefined);
 }
 
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
@@ -50,23 +76,44 @@ async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   return response.blob();
 }
 
-/** High-quality background removal using ModNet (100% local, no API key). */
+/** Background removal via Transformers.js pipeline (100% local, no API key). */
 export async function hqRemoveBackground(
   imageSrc: string,
   onProgress?: (progress: number) => void,
-  _backgroundColor = '#ffffff'
+  _backgroundColor = '#ffffff',
+  maxInputPx?: number,
+  modelOverride?: BgRemovalModelOption
 ): Promise<string> {
-  await waitForModelPreload();
-  const { paddedSrc, padding } = await addImagePadding(imageSrc, 0.1);
+  const model = modelOverride ?? getSelectedBgModel();
+  if (model.backend !== 'transformers') {
+    throw new Error('Selected background model is not a Transformers.js model.');
+  }
+
+  if (!modelOverride) {
+    await waitForModelPreload();
+  }
+
+  const inputLimit = maxInputPx ?? model.maxInputPx ?? 2048;
+  const originalSize = await getImageDimensions(imageSrc);
+  const { src: inferenceSrc, scale } = await limitImageSizeForInference(imageSrc, inputLimit);
+  const { paddedSrc, padding } = await addImagePadding(inferenceSrc, 0.1);
   const paddedBlob = await dataUrlToBlob(paddedSrc);
 
-  const segmenter = await getRemover(onProgress);
+  const segmenter = await getRemover(model, onProgress);
   const rawImage = await segmenter(paddedBlob);
   const resultBlob = await rawImage.toBlob('image/png');
 
   const paddedResultUrl = URL.createObjectURL(resultBlob);
   try {
-    const croppedBlob = await cropPaddingFromResult(paddedResultUrl, padding);
+    let croppedBlob = await cropPaddingFromResult(paddedResultUrl, padding);
+    if (scale < 1) {
+      croppedBlob = await upscaleImageBlob(
+        croppedBlob,
+        originalSize.width,
+        originalSize.height
+      );
+    }
+
     const croppedUrl = URL.createObjectURL(croppedBlob);
 
     try {

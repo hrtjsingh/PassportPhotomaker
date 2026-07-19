@@ -43,10 +43,12 @@ export function getBgRemovalPublicPath(): string {
   return resolvedPublicPath ?? getLocalBgRemovalPublicPath();
 }
 
-export function getBgRemovalConfig() {
+type ImglyModel = 'isnet' | 'isnet_fp16' | 'isnet_quint8';
+
+export function getBgRemovalConfig(model: ImglyModel = 'isnet_fp16') {
   return {
     publicPath: getBgRemovalPublicPath(),
-    model: 'isnet_fp16' as const,
+    model,
     output: {
       quality: 1.0,
       format: 'image/png' as const,

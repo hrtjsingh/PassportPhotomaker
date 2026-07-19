@@ -92,7 +92,7 @@ export function runEnhanceInWorker(
 
     w.addEventListener('message', onMessage);
     w.addEventListener('error', onError);
-    w.postMessage({ type: 'enhance', id, blob } satisfies EnhanceWorkerCommand, [blob]);
+    w.postMessage({ type: 'enhance', id, blob } satisfies EnhanceWorkerCommand);
   });
 }
 

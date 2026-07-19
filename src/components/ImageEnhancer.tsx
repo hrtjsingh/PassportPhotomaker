@@ -203,7 +203,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({
               Optional — adjust sliders or use a preset below.
             </p>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="flex justify-items-end">
               <Button
                 variant="secondary"
                 size="md"
@@ -215,7 +215,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({
               >
                 Smart Auto
               </Button>
-              <Button
+              {/* <Button
                 variant="primary"
                 size="md"
                 fullWidth
@@ -225,7 +225,7 @@ export const ImageEnhancer: React.FC<ImageEnhancerProps> = ({
                 icon={<Sparkles className="w-3.5 h-3.5" />}
               >
                 HQ Enhance
-              </Button>
+              </Button> */}
             </div>
           </div>
 
