@@ -470,14 +470,14 @@ export default function PassportPhoto() {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {/* <Link
+            <Link
               to="/settings"
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-snapid-muted hover:text-brand-300 hover:bg-snapid-bg-elevated/60 transition-colors touch-target"
               title="Model settings"
             >
               <Settings2 className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span className="hidden sm:inline">Settings</span>
-            </Link> */}
+            </Link>
             <Link
               to="/id-print"
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-snapid-muted hover:text-brand-300 hover:bg-snapid-bg-elevated/60 transition-colors touch-target"
