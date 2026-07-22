@@ -329,13 +329,21 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
     }, [injectPrintPageStyle]);
 
     useEffect(() => {
-      const cleanup = () => {
+      const onBeforePrint = () => {
+        document.body.classList.add('snapid-print-layout');
+        injectPrintPageStyle();
+      };
+      const onAfterPrint = () => {
         document.body.classList.remove('snapid-print-layout');
         document.getElementById(PRINT_PAGE_STYLE_ID)?.remove();
       };
-      window.addEventListener('afterprint', cleanup);
-      return () => window.removeEventListener('afterprint', cleanup);
-    }, []);
+      window.addEventListener('beforeprint', onBeforePrint);
+      window.addEventListener('afterprint', onAfterPrint);
+      return () => {
+        window.removeEventListener('beforeprint', onBeforePrint);
+        window.removeEventListener('afterprint', onAfterPrint);
+      };
+    }, [injectPrintPageStyle]);
 
     const canPrint = !isSheetLoading && (hasSheet || Boolean(imageSrc));
 
@@ -690,10 +698,10 @@ interface PrintWorkspaceProps {
   };
   contentSrc: string;
   isDragging: boolean;
-  onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerCancel: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerDown?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerCancel?: (event: React.PointerEvent<HTMLDivElement>) => void;
   pageCount: number;
   previewPageIndex: number;
   onPreviewPageChange: (index: number) => void;
@@ -825,7 +833,7 @@ function PrintPageCanvas({
       className={cn(
         'print-layout-page relative overflow-hidden',
         pageBreak && 'print-layout-page-break',
-        previewChrome && 'border border-[#000000]/25'
+        previewChrome && 'print-layout-preview-chrome'
       )}
       style={pageStyle}
     >
