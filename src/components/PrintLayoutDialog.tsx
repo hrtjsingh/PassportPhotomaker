@@ -25,17 +25,21 @@ import {
   CSS_MM_TO_PX,
   LAYOUT_BLEED_MAX,
   LAYOUT_BLEED_MIN,
-  LAYOUT_DEFAULT_BLEED,
-  LAYOUT_DEFAULT_SCALE,
+  LAYOUT_DEFAULT_ROTATION,
   LAYOUT_ROTATION_MAX,
   LAYOUT_ROTATION_MIN,
   LAYOUT_SCALE_MAX,
   LAYOUT_SCALE_MIN,
   computeContentRectMm,
   computePreviewScale,
-  createDefaultLayoutState,
   type PhotoLayoutState,
 } from '../utils/printLayoutMath';
+import {
+  createLayoutStateFromPreferences,
+  getPrintLayoutPreferences,
+  getSavedBleedMm,
+  savePrintLayoutPreferences,
+} from '../utils/printLayoutPreferences';
 
 const PRINT_PAGE_STYLE_ID = 'snapid-print-layout-page';
 const PREVIEW_MAX_WIDTH_PX = 520;
@@ -137,8 +141,8 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
     const paperId = controlledPaperId ?? internalPaperId;
     const landscape = controlledLandscape ?? internalLandscape;
 
-    const [layout, setLayout] = useState<PhotoLayoutState>(createDefaultLayoutState);
-    const [bleedMm, setBleedMm] = useState(LAYOUT_DEFAULT_BLEED);
+    const [layout, setLayout] = useState<PhotoLayoutState>(createLayoutStateFromPreferences);
+    const [bleedMm, setBleedMm] = useState(getSavedBleedMm);
     const [previewPageIndex, setPreviewPageIndex] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
@@ -187,8 +191,14 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
       : imageSrc;
 
     const resetLayout = useCallback(() => {
-      setLayout(createDefaultLayoutState());
-      setBleedMm(LAYOUT_DEFAULT_BLEED);
+      const prefs = getPrintLayoutPreferences();
+      setLayout({
+        offsetXMm: 0,
+        offsetYMm: 0,
+        scalePercent: prefs.scalePercent,
+        rotationDeg: LAYOUT_DEFAULT_ROTATION,
+      });
+      setBleedMm(prefs.bleedMm);
       setPreviewPageIndex(0);
       if (!isControlledPaper) {
         setInternalLandscape(initialLandscape);
@@ -202,11 +212,22 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
 
     useEffect(() => {
       if (variant === 'inline') {
-        setLayout(createDefaultLayoutState());
-        setBleedMm(LAYOUT_DEFAULT_BLEED);
+        setLayout((prev) => ({
+          ...prev,
+          offsetXMm: 0,
+          offsetYMm: 0,
+          rotationDeg: LAYOUT_DEFAULT_ROTATION,
+        }));
         setPreviewPageIndex(0);
       }
     }, [variant, paperId, landscape, sheetPages.length]);
+
+    useEffect(() => {
+      savePrintLayoutPreferences({
+        scalePercent: layout.scalePercent,
+        bleedMm,
+      });
+    }, [layout.scalePercent, bleedMm]);
 
     useEffect(() => {
       setPreviewPageIndex((index) => Math.min(index, Math.max(sheetPages.length - 1, 0)));
