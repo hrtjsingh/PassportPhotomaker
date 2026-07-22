@@ -31,7 +31,6 @@ export const BG_REMOVAL_MODELS: BgRemovalModelOption[] = [
     memoryHeavy: true,
     tier: 'quality',
     sizeHint: '~220 MB',
-    recommended: true,
   },
   {
     id: 'rmbg-2.0',
@@ -58,6 +57,7 @@ export const BG_REMOVAL_MODELS: BgRemovalModelOption[] = [
     maxInputPx: 896,
     tier: 'quality',
     sizeHint: '~88 MB',
+    recommended: true,
   },
   {
     id: 'ormbg',
@@ -102,7 +102,7 @@ export const BG_REMOVAL_MODELS: BgRemovalModelOption[] = [
   },
 ];
 
-export const DEFAULT_BG_REMOVAL_MODEL_ID = 'ben2';
+export const DEFAULT_BG_REMOVAL_MODEL_ID = 'rmbg-1.4';
 
 /** Fallback when memory-heavy models OOM in the browser. */
 export const OOM_FALLBACK_MODEL_ID = 'modnet';
