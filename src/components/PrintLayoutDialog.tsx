@@ -25,17 +25,21 @@ import {
   CSS_MM_TO_PX,
   LAYOUT_BLEED_MAX,
   LAYOUT_BLEED_MIN,
-  LAYOUT_DEFAULT_BLEED,
-  LAYOUT_DEFAULT_SCALE,
+  LAYOUT_DEFAULT_ROTATION,
   LAYOUT_ROTATION_MAX,
   LAYOUT_ROTATION_MIN,
   LAYOUT_SCALE_MAX,
   LAYOUT_SCALE_MIN,
   computeContentRectMm,
   computePreviewScale,
-  createDefaultLayoutState,
   type PhotoLayoutState,
 } from '../utils/printLayoutMath';
+import {
+  createLayoutStateFromPreferences,
+  getPrintLayoutPreferences,
+  getSavedBleedMm,
+  savePrintLayoutPreferences,
+} from '../utils/printLayoutPreferences';
 
 const PRINT_PAGE_STYLE_ID = 'snapid-print-layout-page';
 const PREVIEW_MAX_WIDTH_PX = 520;
@@ -137,8 +141,8 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
     const paperId = controlledPaperId ?? internalPaperId;
     const landscape = controlledLandscape ?? internalLandscape;
 
-    const [layout, setLayout] = useState<PhotoLayoutState>(createDefaultLayoutState);
-    const [bleedMm, setBleedMm] = useState(LAYOUT_DEFAULT_BLEED);
+    const [layout, setLayout] = useState<PhotoLayoutState>(createLayoutStateFromPreferences);
+    const [bleedMm, setBleedMm] = useState(getSavedBleedMm);
     const [previewPageIndex, setPreviewPageIndex] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
@@ -187,8 +191,14 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
       : imageSrc;
 
     const resetLayout = useCallback(() => {
-      setLayout(createDefaultLayoutState());
-      setBleedMm(LAYOUT_DEFAULT_BLEED);
+      const prefs = getPrintLayoutPreferences();
+      setLayout({
+        offsetXMm: 0,
+        offsetYMm: 0,
+        scalePercent: prefs.scalePercent,
+        rotationDeg: LAYOUT_DEFAULT_ROTATION,
+      });
+      setBleedMm(prefs.bleedMm);
       setPreviewPageIndex(0);
       if (!isControlledPaper) {
         setInternalLandscape(initialLandscape);
@@ -202,11 +212,22 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
 
     useEffect(() => {
       if (variant === 'inline') {
-        setLayout(createDefaultLayoutState());
-        setBleedMm(LAYOUT_DEFAULT_BLEED);
+        setLayout((prev) => ({
+          ...prev,
+          offsetXMm: 0,
+          offsetYMm: 0,
+          rotationDeg: LAYOUT_DEFAULT_ROTATION,
+        }));
         setPreviewPageIndex(0);
       }
     }, [variant, paperId, landscape, sheetPages.length]);
+
+    useEffect(() => {
+      savePrintLayoutPreferences({
+        scalePercent: layout.scalePercent,
+        bleedMm,
+      });
+    }, [layout.scalePercent, bleedMm]);
 
     useEffect(() => {
       setPreviewPageIndex((index) => Math.min(index, Math.max(sheetPages.length - 1, 0)));
@@ -308,13 +329,21 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
     }, [injectPrintPageStyle]);
 
     useEffect(() => {
-      const cleanup = () => {
+      const onBeforePrint = () => {
+        document.body.classList.add('snapid-print-layout');
+        injectPrintPageStyle();
+      };
+      const onAfterPrint = () => {
         document.body.classList.remove('snapid-print-layout');
         document.getElementById(PRINT_PAGE_STYLE_ID)?.remove();
       };
-      window.addEventListener('afterprint', cleanup);
-      return () => window.removeEventListener('afterprint', cleanup);
-    }, []);
+      window.addEventListener('beforeprint', onBeforePrint);
+      window.addEventListener('afterprint', onAfterPrint);
+      return () => {
+        window.removeEventListener('beforeprint', onBeforePrint);
+        window.removeEventListener('afterprint', onAfterPrint);
+      };
+    }, [injectPrintPageStyle]);
 
     const canPrint = !isSheetLoading && (hasSheet || Boolean(imageSrc));
 
@@ -515,6 +544,7 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
               bleedStyle={bleedStyle}
               contentStyle={contentStyle}
               contentSrc={previewContentSrc}
+              pages={hasSheet ? sheetPages : undefined}
               isDragging={isDragging}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
@@ -668,11 +698,12 @@ interface PrintWorkspaceProps {
     transformOrigin: string;
   };
   contentSrc: string;
+  pages?: string[];
   isDragging: boolean;
-  onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void;
-  onPointerCancel: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerDown?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerCancel?: (event: React.PointerEvent<HTMLDivElement>) => void;
   pageCount: number;
   previewPageIndex: number;
   onPreviewPageChange: (index: number) => void;
@@ -688,6 +719,7 @@ function PrintWorkspace({
   bleedStyle,
   contentStyle,
   contentSrc,
+  pages,
   isDragging,
   onPointerDown,
   onPointerMove,
@@ -699,15 +731,42 @@ function PrintWorkspace({
 }: PrintWorkspaceProps) {
   const scaledW = pageWidthMm * CSS_MM_TO_PX * previewScale;
   const scaledH = pageHeightMm * CSS_MM_TO_PX * previewScale;
+  const isMultiPage = pages && pages.length > 1;
+
+  const renderPage = (src: string, key: string) => (
+    <div
+      key={key}
+      className="relative shrink-0 mx-auto bg-white"
+      style={{ width: scaledW, height: scaledH }}
+    >
+      <div
+        className="print-layout-preview-scale absolute top-0 left-0 origin-top-left"
+        style={{ transform: `scale(${previewScale})` }}
+      >
+        <PrintPageCanvas
+          pageStyle={pageStyle}
+          bleedStyle={bleedStyle}
+          contentStyle={contentStyle}
+          contentSrc={src}
+          isDragging={isDragging}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          previewChrome
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-1 flex-col bg-[#1b1e1f] min-h-0">
       <div className="flex items-center justify-between gap-2 bg-[#1d1b17] px-3 py-2 border-b border-[#e8dcc8]/15 shrink-0">
         <p className="text-[11px] font-mono text-snapid-muted truncate">
           {paperLabel} · {pageWidthMm.toFixed(1)}×{pageHeightMm.toFixed(1)} mm ·{' '}
-          {landscape ? 'landscape' : 'portrait'}
+          {isMultiPage ? `${pages.length} pages` : landscape ? 'landscape' : 'portrait'}
         </p>
-        {pageCount > 1 && (
+        {pageCount > 1 && !isMultiPage && (
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
@@ -735,25 +794,13 @@ function PrintWorkspace({
       </div>
 
       <div className="flex-1 overflow-auto min-h-0">
-        <div className="relative shrink-0 mx-auto bg-white" style={{ width: scaledW, height: scaledH }}>
-          <div
-            className="print-layout-preview-scale absolute top-0 left-0 origin-top-left"
-            style={{ transform: `scale(${previewScale})` }}
-          >
-            <PrintPageCanvas
-              pageStyle={pageStyle}
-              bleedStyle={bleedStyle}
-              contentStyle={contentStyle}
-              contentSrc={contentSrc}
-              isDragging={isDragging}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerCancel}
-              previewChrome
-            />
+        {isMultiPage ? (
+          <div className="flex flex-col items-center gap-4 py-4">
+            {pages.map((src, index) => renderPage(src, `preview-page-${index}`))}
           </div>
-        </div>
+        ) : (
+          renderPage(contentSrc, 'preview-page')
+        )}
       </div>
 
       <p className="text-[11px] bg-[#1d1b17] text-snapid-muted text-center px-3 py-2 border-t border-[#e8dcc8]/15 shrink-0 print-layout-dialog-controls">
@@ -804,7 +851,7 @@ function PrintPageCanvas({
       className={cn(
         'print-layout-page relative overflow-hidden',
         pageBreak && 'print-layout-page-break',
-        previewChrome && 'border border-[#000000]/25'
+        previewChrome && 'print-layout-preview-chrome'
       )}
       style={pageStyle}
     >
