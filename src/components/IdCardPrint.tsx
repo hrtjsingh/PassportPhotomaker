@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { CreditCard, Shield, Layout, ArrowLeft } from 'lucide-react';
+import { CreditCard, Shield, ArrowLeft, Plus, Minus, X } from 'lucide-react';
 import { PageBackground } from './PageBackground';
 import { BrandLogo } from './BrandLogo';
 import { ImageUploadSlot } from './ImageUploadSlot';
@@ -14,6 +14,7 @@ import { generateIdCardA4Layout } from '../utils/generateIdCardA4Layout';
 import { exportPDF } from '../utils/exportPDF';
 import type { A4LayoutResult } from '../utils/generateA4Layout';
 import { A4_SHEET } from '../config/sheetSizes';
+import { useIdCardSessionStore } from '../stores/idCardSessionStore';
 
 type IdSide = 'front' | 'back';
 
@@ -29,11 +30,15 @@ const ID_CARD_ASPECT = ID_CARD_ID1.widthMm / ID_CARD_ID1.heightMm;
 export default function IdCardPrint() {
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [backImage, setBackImage] = useState<string | null>(null);
+  const [currentCardId, setCurrentCardId] = useState<string | null>(null);
   const [upscaleFactor, setUpscaleFactor] = useState(1);
   const [layout, setLayout] = useState<A4LayoutResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCropModalReady, setIsCropModalReady] = useState(false);
   const [cropSession, setCropSession] = useState<CropSession | null>(null);
+
+  const { cards: sessionCards, addOrUpdateCard, removeCard, setCardCopies, clear: clearSession } =
+    useIdCardSessionStore();
 
   const handleCropModalReady = useCallback(() => {
     setIsCropModalReady(true);
@@ -98,10 +103,30 @@ export default function IdCardPrint() {
   };
 
   useEffect(() => {
+    if (!frontImage || !backImage) return;
+
+    const id = currentCardId ?? crypto.randomUUID();
+    if (!currentCardId) setCurrentCardId(id);
+
+    const existing = useIdCardSessionStore.getState().cards.find((c) => c.id === id);
+    const cardNumber =
+      existing?.label ??
+      `ID ${useIdCardSessionStore.getState().cards.filter((c) => c.id !== id).length + 1}`;
+
+    addOrUpdateCard({
+      id,
+      frontImage,
+      backImage,
+      copies: existing?.copies ?? 1,
+      label: cardNumber,
+    });
+  }, [frontImage, backImage, currentCardId, addOrUpdateCard]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const buildLayout = async () => {
-      if (!frontImage || !backImage) {
+      if (sessionCards.length === 0) {
         setLayout((prev) => {
           revokeLayout(prev);
           return null;
@@ -112,11 +137,13 @@ export default function IdCardPrint() {
       setIsGenerating(true);
       try {
         const result = await generateIdCardA4Layout(
-          frontImage,
-          backImage,
+          sessionCards.map((card) => ({
+            frontSrc: card.frontImage,
+            backSrc: card.backImage,
+            copies: card.copies,
+          })),
           ID_CARD_ID1.widthMm,
           ID_CARD_ID1.heightMm,
-          1,
           300 * upscaleFactor
         );
         if (!cancelled) {
@@ -144,7 +171,7 @@ export default function IdCardPrint() {
     return () => {
       cancelled = true;
     };
-  }, [frontImage, backImage, upscaleFactor, revokeLayout]);
+  }, [sessionCards, upscaleFactor, revokeLayout]);
 
   const handlePrint = () => {
     if (!layout?.pages.length) return;
@@ -184,7 +211,32 @@ export default function IdCardPrint() {
     printWindow.document.close();
   };
 
-  const ready = Boolean(frontImage && backImage);
+  const handleAddAnotherId = () => {
+    setFrontImage(null);
+    setBackImage(null);
+    setCurrentCardId(null);
+  };
+
+  const handleRemoveCard = (id: string) => {
+    const card = sessionCards.find((c) => c.id === id);
+    const isCurrent = id === currentCardId;
+    removeCard(id);
+
+    if (card && isCurrent) {
+      revokeBlob(card.frontImage);
+      revokeBlob(card.backImage);
+      setFrontImage(null);
+      setBackImage(null);
+      setCurrentCardId(null);
+      setLayout(null);
+    } else if (card) {
+      revokeBlob(card.frontImage);
+      revokeBlob(card.backImage);
+    }
+  };
+
+  const ready = sessionCards.length > 0;
+  const currentReady = Boolean(frontImage && backImage);
 
   return (
     <div className="relative min-h-screen flex flex-col text-zinc-50 font-sans">
@@ -219,9 +271,88 @@ export default function IdCardPrint() {
           </p>
         </div>
 
+        {sessionCards.length > 0 && (
+          <div className="mb-6 sm:mb-8">
+            <p className="text-xs font-medium text-zinc-200 mb-2">IDs in this print</p>
+            <div className="flex items-center gap-3 overflow-x-auto pb-2">
+              {sessionCards.map((card) => (
+                <div
+                  key={card.id}
+                  className="relative shrink-0 rounded-lg border border-white/10 bg-zinc-900/60 p-2"
+                >
+                  <div className="flex flex-col gap-0.5 w-16">
+                    <img
+                      src={card.frontImage}
+                      alt=""
+                      className="w-full h-8 object-cover rounded bg-white"
+                    />
+                    <img
+                      src={card.backImage}
+                      alt=""
+                      className="w-full h-8 object-cover rounded bg-white"
+                    />
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setCardCopies(card.id, Math.max(1, card.copies - 1))}
+                        disabled={card.copies <= 1}
+                        className="p-1 rounded bg-zinc-800 border border-white/10 text-zinc-200 disabled:opacity-40 hover:border-brand-400/40"
+                        aria-label="Decrease copies"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-6 text-center text-xs font-mono text-zinc-200">
+                        {card.copies}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCardCopies(card.id, card.copies + 1)}
+                        className="p-1 rounded bg-zinc-800 border border-white/10 text-zinc-200 hover:border-brand-400/40"
+                        aria-label="Increase copies"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCard(card.id)}
+                      className="p-1 rounded text-brand-400 hover:text-brand-300 hover:bg-brand-400/10"
+                      aria-label="Remove ID"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1 truncate max-w-[80px]">
+                    {card.label}
+                  </p>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleAddAnotherId}
+                className="shrink-0 flex flex-col items-center justify-center gap-1.5 w-16 h-[108px] rounded-lg border border-dashed border-white/20 bg-zinc-900/40 text-zinc-500 hover:text-zinc-200 hover:border-brand-400/40 transition-colors"
+                aria-label="Add another ID"
+              >
+                <Plus className="w-6 h-6" />
+                <span className="text-[10px] font-medium text-center leading-tight px-1">Add</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Up to 2 ID sets (4 sides) per A4 page · adjust copies per ID below
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 items-start">
           <div className="flex flex-col gap-6">
             <div className="card-elevated p-5 sm:p-6 flex flex-col gap-5">
+              <p className="text-xs font-medium text-zinc-400">
+                {sessionCards.length > 0 && !currentReady
+                  ? 'Upload front and back for the next ID'
+                  : 'Upload front and back'}
+              </p>
               <ImageUploadSlot
                 label="Front side"
                 inputId="id-front-upload"

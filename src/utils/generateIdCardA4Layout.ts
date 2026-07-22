@@ -10,6 +10,12 @@ import { A4_SHEET } from '../config/sheetSizes';
 
 type PrintDPI = number;
 
+export interface IdCardSource {
+  frontSrc: string;
+  backSrc: string;
+  copies: number;
+}
+
 const PAGE_PADDING_MM = 10;
 const CARD_GAP_MM = 20;
 const SET_GAP_MM = 20;
@@ -56,11 +62,9 @@ function drawSet(
 }
 
 export async function generateIdCardA4Layout(
-  frontSrc: string,
-  backSrc: string,
+  idCards: IdCardSource[],
   cardWidthMm: number,
   cardHeightMm: number,
-  numCopies: number,
   dpi: PrintDPI = 300
 ): Promise<A4LayoutResult> {
   const dpiConfig: PrintDpiConfig = getPrintDpiConfig(
@@ -95,9 +99,24 @@ export async function generateIdCardA4Layout(
   }
 
   const setsPerPage = maxSetsOnPage;
-  const totalPages = Math.max(1, Math.ceil(numCopies / setsPerPage));
+  const placements = idCards.flatMap((card) =>
+    Array.from({ length: card.copies }, () => ({
+      frontSrc: card.frontSrc,
+      backSrc: card.backSrc,
+    }))
+  );
+  const totalCopies = placements.length;
+  const totalPages = Math.max(1, Math.ceil(totalCopies / setsPerPage));
 
-  const [frontImg, backImg] = await Promise.all([loadImage(frontSrc), loadImage(backSrc)]);
+  const uniqueSrcs = Array.from(
+    new Set(placements.flatMap((p) => [p.frontSrc, p.backSrc]))
+  );
+  const imageMap = new Map<string, HTMLImageElement>();
+  await Promise.all(
+    uniqueSrcs.map(async (src) => {
+      imageMap.set(src, await loadImage(src));
+    })
+  );
 
   const originX = paddingPx + (usableWidth - setWidthPx) / 2;
 
@@ -114,12 +133,16 @@ export async function generateIdCardA4Layout(
     ctx.imageSmoothingQuality = 'high';
 
     const startCopy = page * setsPerPage;
-    const endCopy = Math.min(numCopies, startCopy + setsPerPage);
+    const endCopy = Math.min(totalCopies, startCopy + setsPerPage);
     const setsOnPage = endCopy - startCopy;
     const pageBlockHeight = setsOnPage * setHeightPx + (setsOnPage - 1) * setGapPx;
     let originY = paddingPx + (usableHeight - pageBlockHeight) / 2;
 
     for (let i = startCopy; i < endCopy; i++) {
+      const placement = placements[i];
+      const frontImg = imageMap.get(placement.frontSrc);
+      const backImg = imageMap.get(placement.backSrc);
+      if (!frontImg || !backImg) continue;
       drawSet(ctx, frontImg, backImg, originX, originY, cardWidthPx, cardHeightPx, cardGapPx);
       originY += setHeightPx + setGapPx;
     }
@@ -131,7 +154,7 @@ export async function generateIdCardA4Layout(
     pages,
     photosPerPage: setsPerPage,
     totalPages,
-    totalCopies: numCopies,
+    totalCopies,
     cols: 1,
     rows: setsPerPage,
     photoWidthMm: cardWidthMm,
