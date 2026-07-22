@@ -544,6 +544,7 @@ export const PrintLayoutEditor = forwardRef<PrintLayoutEditorHandle, PrintLayout
               bleedStyle={bleedStyle}
               contentStyle={contentStyle}
               contentSrc={previewContentSrc}
+              pages={hasSheet ? sheetPages : undefined}
               isDragging={isDragging}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
@@ -697,6 +698,7 @@ interface PrintWorkspaceProps {
     transformOrigin: string;
   };
   contentSrc: string;
+  pages?: string[];
   isDragging: boolean;
   onPointerDown?: (event: React.PointerEvent<HTMLDivElement>) => void;
   onPointerMove?: (event: React.PointerEvent<HTMLDivElement>) => void;
@@ -717,6 +719,7 @@ function PrintWorkspace({
   bleedStyle,
   contentStyle,
   contentSrc,
+  pages,
   isDragging,
   onPointerDown,
   onPointerMove,
@@ -728,15 +731,42 @@ function PrintWorkspace({
 }: PrintWorkspaceProps) {
   const scaledW = pageWidthMm * CSS_MM_TO_PX * previewScale;
   const scaledH = pageHeightMm * CSS_MM_TO_PX * previewScale;
+  const isMultiPage = pages && pages.length > 1;
+
+  const renderPage = (src: string, key: string) => (
+    <div
+      key={key}
+      className="relative shrink-0 mx-auto bg-white"
+      style={{ width: scaledW, height: scaledH }}
+    >
+      <div
+        className="print-layout-preview-scale absolute top-0 left-0 origin-top-left"
+        style={{ transform: `scale(${previewScale})` }}
+      >
+        <PrintPageCanvas
+          pageStyle={pageStyle}
+          bleedStyle={bleedStyle}
+          contentStyle={contentStyle}
+          contentSrc={src}
+          isDragging={isDragging}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          previewChrome
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-1 flex-col bg-[#1b1e1f] min-h-0">
       <div className="flex items-center justify-between gap-2 bg-[#1d1b17] px-3 py-2 border-b border-[#e8dcc8]/15 shrink-0">
         <p className="text-[11px] font-mono text-snapid-muted truncate">
           {paperLabel} · {pageWidthMm.toFixed(1)}×{pageHeightMm.toFixed(1)} mm ·{' '}
-          {landscape ? 'landscape' : 'portrait'}
+          {isMultiPage ? `${pages.length} pages` : landscape ? 'landscape' : 'portrait'}
         </p>
-        {pageCount > 1 && (
+        {pageCount > 1 && !isMultiPage && (
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
@@ -764,25 +794,13 @@ function PrintWorkspace({
       </div>
 
       <div className="flex-1 overflow-auto min-h-0">
-        <div className="relative shrink-0 mx-auto bg-white" style={{ width: scaledW, height: scaledH }}>
-          <div
-            className="print-layout-preview-scale absolute top-0 left-0 origin-top-left"
-            style={{ transform: `scale(${previewScale})` }}
-          >
-            <PrintPageCanvas
-              pageStyle={pageStyle}
-              bleedStyle={bleedStyle}
-              contentStyle={contentStyle}
-              contentSrc={contentSrc}
-              isDragging={isDragging}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerCancel}
-              previewChrome
-            />
+        {isMultiPage ? (
+          <div className="flex flex-col items-center gap-4 py-4">
+            {pages.map((src, index) => renderPage(src, `preview-page-${index}`))}
           </div>
-        </div>
+        ) : (
+          renderPage(contentSrc, 'preview-page')
+        )}
       </div>
 
       <p className="text-[11px] bg-[#1d1b17] text-snapid-muted text-center px-3 py-2 border-t border-[#e8dcc8]/15 shrink-0 print-layout-dialog-controls">
