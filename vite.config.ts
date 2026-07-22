@@ -1,9 +1,35 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import type { Plugin } from 'vite';
 import {defineConfig, loadEnv} from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { PWA_MANIFEST } from './src/config/pwa';
+
+/** SPA fallback for `vite preview` — direct URL loads must serve index.html. */
+function spaPreviewFallback(): Plugin {
+  return {
+    name: 'spa-preview-fallback',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        const url = req.url?.split('?')[0] ?? '';
+        const isGet = req.method === 'GET' || req.method === 'HEAD';
+        const hasExtension = /\.[a-zA-Z0-9]+$/.test(url);
+        const isAssetPath =
+          url.startsWith('/assets/') ||
+          url.startsWith('/bg-removal-assets/') ||
+          url === '/sw.js' ||
+          url === '/manifest.webmanifest' ||
+          url.startsWith('/workbox-');
+
+        if (isGet && !hasExtension && !isAssetPath) {
+          req.url = '/index.html';
+        }
+        next();
+      });
+    },
+  };
+}
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
@@ -11,6 +37,7 @@ export default defineConfig(({mode}) => {
     plugins: [
       react(),
       tailwindcss(),
+      spaPreviewFallback(),
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg', 'apple-touch-icon.svg', 'robots.txt', 'sitemap.xml'],
