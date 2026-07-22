@@ -8,6 +8,9 @@ import {
   Layout,
   CreditCard,
   Settings2,
+  Plus,
+  Minus,
+  X,
 } from 'lucide-react';
 import { Area } from 'react-easy-crop';
 
@@ -36,6 +39,7 @@ import { StepProgress, type StepConfig, type WizardStep } from './StepProgress';
 import { STUDIO_STEPS } from '../config/studioSteps';
 import { StepFooter } from './StepFooter';
 import { Button } from './ui/Button';
+import { usePhotoSessionStore } from '../stores/photoSessionStore';
 import { BrandLogo } from './BrandLogo';
 import { BRAND_TAGLINE, BRAND_DESCRIPTION } from '../config/brand';
 import { usePageSEO } from '../hooks/usePageSEO';
@@ -101,7 +105,10 @@ export default function PassportPhoto() {
   const [bgRemovalSkipped, setBgRemovalSkipped] = useState(false);
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [currentPhotoId, setCurrentPhotoId] = useState<string | null>(null);
   const printLayoutRef = useRef<PrintLayoutEditorHandle>(null);
+
+  const { photos: sessionPhotos, addOrUpdatePhoto, removePhoto, setPhotoCopies, clear: clearSession } = usePhotoSessionStore();
 
   const photoWidthMm = selectedSize.id === 'custom' ? customWidth : selectedSize.widthMm;
   const photoHeightMm = selectedSize.id === 'custom' ? customHeight : selectedSize.heightMm;
@@ -209,6 +216,7 @@ export default function PassportPhoto() {
   const handleUpload = (original: string, compressed: string) => {
     setOriginalImage(original);
     setCompressedImage(compressed);
+    setCurrentPhotoId(crypto.randomUUID());
     setCurrentStep('crop');
   };
 
@@ -331,9 +339,44 @@ export default function PassportPhoto() {
     updatePassportPhoto();
   }, [enhancedImage, transparentImage, croppedImage, selectedSize, customWidth, customHeight, bgColor, upscaleFactor]);
 
+  // Sync current processed photo to session store
+  useEffect(() => {
+    if (!passportPhoto || !currentPhotoId) return;
+    addOrUpdatePhoto({
+      id: currentPhotoId,
+      passportPhoto,
+      widthMm: photoWidthMm,
+      heightMm: photoHeightMm,
+      bgColor,
+      copies: numCopies,
+      sizeLabel:
+        selectedSize.id === 'custom'
+          ? `${customWidth}×${customHeight} mm`
+          : selectedSize.description,
+    });
+  }, [
+    passportPhoto,
+    currentPhotoId,
+    photoWidthMm,
+    photoHeightMm,
+    bgColor,
+    numCopies,
+    selectedSize.id,
+    selectedSize.description,
+    customWidth,
+    customHeight,
+    addOrUpdatePhoto,
+  ]);
+
+  // Keep copies for current photo in sync when the selector changes
+  useEffect(() => {
+    if (!currentPhotoId) return;
+    setPhotoCopies(currentPhotoId, numCopies);
+  }, [currentPhotoId, numCopies, setPhotoCopies]);
+
   // Generate print layout when preview settings change
   useEffect(() => {
-    if (currentStep !== 'preview' || !passportPhoto) return;
+    if (currentStep !== 'preview' || sessionPhotos.length === 0) return;
 
     let cancelled = false;
 
@@ -358,10 +401,9 @@ export default function PassportPhoto() {
 
       try {
         const result = await generateA4Layout(
-          passportPhoto,
+          sessionPhotos.map((p) => ({ src: p.passportPhoto, copies: p.copies })),
           photoWidthMm,
           photoHeightMm,
-          numCopies,
           300 * upscaleFactor,
           {
             sheetWidthMm: orientedSheet.widthMm,
@@ -393,8 +435,7 @@ export default function PassportPhoto() {
       cancelled = true;
     };
   }, [
-    passportPhoto,
-    numCopies,
+    sessionPhotos,
     currentStep,
     photoWidthMm,
     photoHeightMm,
@@ -439,11 +480,56 @@ export default function PassportPhoto() {
     setEnhanceSkipped(false);
     setBgRemovalSkipped(false);
     setCurrentStep('upload');
+    setCurrentPhotoId(null);
+    clearSession();
     setShowResetConfirm(false);
   };
 
   const handlePrint = () => {
     printLayoutRef.current?.print();
+  };
+
+  const handleAddAnotherPhoto = () => {
+    setOriginalImage(null);
+    setCompressedImage(null);
+    setCroppedImage(null);
+    setTransparentImage(null);
+    setEnhancedImage(null);
+    setPassportPhoto(null);
+    setUpscaleFactor(1);
+    setEnhanceSkipped(false);
+    setBgRemovalSkipped(false);
+    setNumCopies(1);
+    setCurrentPhotoId(null);
+    setCurrentStep('upload');
+  };
+
+  const handleRemovePhoto = (id: string) => {
+    const nextSession = sessionPhotos.filter((p) => p.id !== id);
+    const isCurrent = id === currentPhotoId;
+    removePhoto(id);
+
+    if (!isCurrent) return;
+
+    setOriginalImage(null);
+    setCompressedImage(null);
+    setCroppedImage(null);
+    setTransparentImage(null);
+    setEnhancedImage(null);
+    setPassportPhoto(null);
+    setUpscaleFactor(1);
+    setEnhanceSkipped(false);
+    setBgRemovalSkipped(false);
+
+    if (nextSession.length > 0) {
+      const last = nextSession[nextSession.length - 1];
+      setCurrentPhotoId(last.id);
+      setNumCopies(last.copies);
+    } else {
+      setCurrentPhotoId(null);
+      setNumCopies(1);
+      setA4Layout(null);
+    }
   };
 
   return (
@@ -770,6 +856,82 @@ export default function PassportPhoto() {
                   className="max-w-6xl"
                 />
 
+                {sessionPhotos.length > 0 && (
+                  <div className="w-full max-w-6xl">
+                    <p className="text-xs font-medium text-snapid-text mb-2">Photos in this print</p>
+                    <div className="flex items-center gap-3 overflow-x-auto pb-2">
+                      {sessionPhotos.map((photo) => (
+                        <div
+                          key={photo.id}
+                          className="relative shrink-0 rounded-lg border border-[#e8dcc8]/10 bg-snapid-bg-elevated/60 p-2"
+                        >
+                          <img
+                            src={photo.passportPhoto}
+                            alt=""
+                            className="w-26.7 h-31.5 object-cover rounded bg-white"
+                          />
+                          <div className="mt-1.5 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const value = Math.max(1, photo.copies - 1);
+                                  setPhotoCopies(photo.id, value);
+                                  if (photo.id === currentPhotoId) {
+                                    setNumCopies(value);
+                                  }
+                                }}
+                                disabled={photo.copies <= 1}
+                                className="p-1 rounded bg-snapid-bg border border-[#e8dcc8]/10 text-snapid-text disabled:opacity-40 hover:border-brand-400/40"
+                                aria-label="Decrease copies"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-6 text-center text-xs font-mono text-snapid-text">
+                                {photo.copies}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const value = photo.copies + 1;
+                                  setPhotoCopies(photo.id, value);
+                                  if (photo.id === currentPhotoId) {
+                                    setNumCopies(value);
+                                  }
+                                }}
+                                className="p-1 rounded bg-snapid-bg border border-[#e8dcc8]/10 text-snapid-text hover:border-brand-400/40"
+                                aria-label="Increase copies"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePhoto(photo.id)}
+                              className="p-1 rounded text-brand-400 hover:text-brand-300 hover:bg-brand-400/10"
+                              aria-label="Remove photo"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-snapid-muted mt-1 truncate max-w-[80px]">
+                            {photo.sizeLabel}
+                          </p>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={handleAddAnotherPhoto}
+                        className="shrink-0 flex flex-col items-center justify-center gap-1.5 w-16 h-[108px] rounded-lg border border-dashed border-[#e8dcc8]/25 bg-snapid-bg-elevated/40 text-snapid-muted hover:text-snapid-text hover:border-brand-400/40 transition-colors"
+                        aria-label="Add another photo"
+                      >
+                        <Plus className="w-6 h-6" />
+                        <span className="text-[10px] font-medium text-center leading-tight px-1">Add</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="w-full max-w-6xl">
                   <PrintLayoutEditor
                     ref={printLayoutRef}
@@ -802,10 +964,11 @@ export default function PassportPhoto() {
                       landscape: sheetLandscape,
                       onLandscapeChange: handleLandscapeChange,
                     }}
-                    copyControls={{
-                      value: numCopies,
-                      onChange: setNumCopies,
-                    }}
+                    copyControls={
+                      sessionPhotos.length <= 1
+                        ? { value: numCopies, onChange: setNumCopies }
+                        : undefined
+                    }
                   />
                 </div>
 

@@ -30,6 +30,11 @@ export interface A4LayoutResult {
   photoHeightMm: number;
 }
 
+export interface PhotoSource {
+  src: string;
+  copies: number;
+}
+
 export interface PrintLayoutOptions {
   sheetWidthMm?: number;
   sheetHeightMm?: number;
@@ -113,10 +118,9 @@ function drawPhotoOnPage(
 }
 
 export async function generateA4Layout(
-  passportPhotoSrc: string,
+  photos: PhotoSource[],
   photoWidthMm: number,
   photoHeightMm: number,
-  numCopies: number,
   dpi: PrintDPI = 300,
   options: PrintLayoutOptions = {}
 ): Promise<A4LayoutResult> {
@@ -176,15 +180,29 @@ export async function generateA4Layout(
       ? Math.round((canvasHeight - gridHeightPx) / 2)
       : mmToPxAtDpi(padding.top, renderDPI);
 
-  const totalPages = Math.max(1, Math.ceil(numCopies / photosPerPage));
+  const placements = photos.flatMap((p) =>
+    Array.from({ length: p.copies }, () => p.src)
+  );
+  const totalCopies = placements.length;
+  const totalPages = Math.max(1, Math.ceil(totalCopies / photosPerPage));
   const scaleFactor = renderDPI / 300;
 
-  const img = new Image();
-  img.src = passportPhotoSrc;
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error('Failed to load passport photo'));
-  });
+  const uniqueSrcs = Array.from(new Set(placements));
+  const imageMap = new Map<string, HTMLImageElement>();
+  await Promise.all(
+    uniqueSrcs.map(
+      (src) =>
+        new Promise<void>((resolve, reject) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = () => {
+            imageMap.set(src, img);
+            resolve();
+          };
+          img.onerror = () => reject(new Error(`Failed to load photo: ${src.slice(0, 40)}`));
+        })
+    )
+  );
 
   const pages: string[] = [];
 
@@ -197,9 +215,12 @@ export async function generateA4Layout(
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     const startCopy = page * photosPerPage;
-    const endCopy = Math.min(numCopies, startCopy + photosPerPage);
+    const endCopy = Math.min(totalCopies, startCopy + photosPerPage);
 
     for (let i = startCopy; i < endCopy; i++) {
+      const src = placements[i];
+      const img = imageMap.get(src);
+      if (!img) continue;
       drawPhotoOnPage(
         ctx,
         img,
@@ -224,7 +245,7 @@ export async function generateA4Layout(
     pages,
     photosPerPage,
     totalPages,
-    totalCopies: numCopies,
+    totalCopies,
     cols,
     rows,
     photoWidthMm,
